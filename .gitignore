@@ -17,7 +17,7 @@ main
 # Dependency directories (remove the comment below to include it)
 vendor/
 /profiles
-/__pycache__
+__pycache__
 
 # IDEs directories
 .idea
