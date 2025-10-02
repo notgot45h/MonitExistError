@@ -1,16 +1,12 @@
-// Импорт необходимых модулей
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-require('dotenv').config(); // Загрузка переменных из .env
+require('dotenv').config(); 
 
-// Создание экземпляра клиента
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Коллекция для хранения команд
 client.commands = new Collection();
 
-// === Динамическая загрузка команд из папки ===
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
@@ -20,7 +16,6 @@ for (const folder of commandFolders) {
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    // Добавляем команду в коллекцию, если у нее есть data и execute
     if ('data' in command && 'execute' in command) {
       client.commands.set(command.data.name, command);
     } else {
@@ -29,9 +24,8 @@ for (const folder of commandFolders) {
   }
 }
 
-// === Обработчик событий для слеш-команд ===
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return; // Реагируем только на слеш-команды
+  if (!interaction.isChatInputCommand()) return;
 
   const command = interaction.client.commands.get(interaction.commandName);
 
@@ -48,10 +42,8 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Событие, которое сработает когда бот будет готов
 client.once(Events.ClientReady, c => {
   console.log(`Готов! Бот ${c.user.tag} в сети.`);
 });
 
-// Запуск бота с использованием токена из .env
 client.login(process.env.DISCORD_TOKEN);
