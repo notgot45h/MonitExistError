@@ -46,3 +46,5 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
     console.error('Ошибка при регистрации команд:', error);
   }
 })();
+
+// node deploy-commands.js
