@@ -15,9 +15,9 @@
 main
 
 # Dependency directories
-node_modules/
 vendor/
 /profiles
+/node_modules
 
 # IDEs directories
 .idea
