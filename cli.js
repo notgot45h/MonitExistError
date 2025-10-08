@@ -31,7 +31,7 @@ class BotCLI {
                         process.kill(pid, 0);
                     }
                     this.isRunning = true;
-                    console.log(chalk.yellow('⚠️  Обнаружен запущенный процесс бота!'));
+                    console.log(chalk.yellow('Обнаружен запущенный процесс бота!'));
                 } catch (e) {
                     fs.unlinkSync(this.pidFile);
                     this.isRunning = false;
@@ -67,8 +67,12 @@ class BotCLI {
         
         choices.push(
             { 
-                name: 'Обновить команды Discord', 
-                value: 'deploy'
+                name: 'Обновить команды (Гильдия) - быстро', 
+                value: 'deploy-guild'
+            },
+            { 
+                name: 'Обновить команды (Глобально) - до 24 часов', 
+                value: 'deploy-global'
             },
             { 
                 name: 'Показать статус', 
@@ -118,8 +122,11 @@ class BotCLI {
             case 'stop':
                 await this.stopBot();
                 break;
-            case 'deploy':
-                await this.deployCommands();
+            case 'deploy-guild':
+                await this.deployGuildCommands();
+                break;
+            case 'deploy-global':
+                await this.deployGlobalCommands();
                 break;
             case 'status':
                 await this.showStatus();
@@ -214,20 +221,47 @@ class BotCLI {
         await this.waitForEnter();
     }
 
-    async deployCommands() {
-        console.log(chalk.blue('Обновляю слеш-команды Discord...'));
+    async deployGuildCommands() {
+        console.log(chalk.blue('Обновляю слеш-команды для гильдии...'));
+        console.log(chalk.yellow('Команды появятся мгновенно!'));
         
         return new Promise((resolve) => {
-            const deployProcess = spawn('node', ['deploy-commands.js'], {
+            const deployProcess = spawn('node', ['deploy-commands-guild.js'], {
                 stdio: 'inherit'
             });
 
             deployProcess.on('close', (code) => {
                 console.log('');
                 if (code === 0) {
-                    console.log(chalk.green('Команды успешно обновлены!'));
+                    console.log(chalk.green('Команды для гильдии успешно обновлены!'));
                 } else {
-                    console.log(chalk.red('Ошибка при обновлении команд.'));
+                    console.log(chalk.red('Ошибка при обновлении команд для гильдии.'));
+                }
+                
+                setTimeout(() => {
+                    resolve();
+                    this.showMainMenu();
+                }, 2000);
+            });
+        });
+    }
+
+    async deployGlobalCommands() {
+        console.log(chalk.blue('Обновляю ГЛОБАЛЬНЫЕ слеш-команды...'));
+        console.log(chalk.yellow('Команды появятся на всех серверах в течение часа!'));
+        
+        return new Promise((resolve) => {
+            const deployProcess = spawn('node', ['deploy-commands-global.js'], {
+                stdio: 'inherit'
+            });
+
+            deployProcess.on('close', (code) => {
+                console.log('');
+                if (code === 0) {
+                    console.log(chalk.green('Глобальные команды успешно отправлены на обновление!'));
+                    console.log(chalk.blue('Команды появятся на всех серверах в течение часа.'));
+                } else {
+                    console.log(chalk.red('Ошибка при глобальном обновлении команд.'));
                 }
                 
                 setTimeout(() => {
@@ -255,29 +289,29 @@ class BotCLI {
         console.log('\n' + chalk.blue.bold('Конфигурация:'));
         
         if (fs.existsSync('.env')) {
-            console.log(chalk.green('[OK] Файл .env найден'));
+            console.log(chalk.green('Файл .env найден'));
             
             try {
                 const envContent = fs.readFileSync('.env', 'utf8');
-                const hasToken = envContent.includes('DISCORD_TOKEN');
-                const hasClientId = envContent.includes('CLIENT_ID');
-                const hasGuildId = envContent.includes('GUILD_ID');
+                const hasToken = envContent.includes('DISCORD_TOKEN') && !envContent.includes('your_bot_token_here');
+                const hasClientId = envContent.includes('CLIENT_ID') && !envContent.includes('your_client_id_here');
+                const hasGuildId = envContent.includes('GUILD_ID') && !envContent.includes('your_guild_id_here');
                 
                 console.log(hasToken ? 
-                    chalk.green('[OK] Токен бота настроен') : 
-                    chalk.red('[ERROR] Токен бота не найден'));
+                    chalk.green('Токен бота настроен') : 
+                    chalk.red('Токен бота не настроен'));
                 console.log(hasClientId ? 
-                    chalk.green('[OK] CLIENT_ID настроен') : 
-                    chalk.red('[ERROR] CLIENT_ID не найден'));
+                    chalk.green('CLIENT_ID настроен') : 
+                    chalk.red('CLIENT_ID не настроен'));
                 console.log(hasGuildId ? 
-                    chalk.green('[OK] GUILD_ID настроен') : 
-                    chalk.red('[ERROR] GUILD_ID не найден'));
+                    chalk.green('GUILD_ID настроен') : 
+                    chalk.red('GUILD_ID не настроен'));
                     
             } catch (e) {
-                console.log(chalk.yellow('[WARN] Не удалось прочитать .env файл'));
+                console.log(chalk.yellow('Не удалось прочитать .env файл'));
             }
         } else {
-            console.log(chalk.red('[ERROR] Файл .env не найден'));
+            console.log(chalk.red('Файл .env не найден'));
         }
 
         console.log('\n' + chalk.blue.bold('Команды:'));
@@ -290,13 +324,13 @@ class BotCLI {
                 if (fs.statSync(folderPath).isDirectory()) {
                     const commands = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
                     totalCommands += commands.length;
-                    console.log(chalk.blue(`  ${folder}: ${commands.length} команд`));
+                    console.log(chalk.blue(`  📁 ${folder}: ${commands.length} команд`));
                 }
             });
             
             console.log(chalk.blue(`Всего команд: ${totalCommands}`));
         } else {
-            console.log(chalk.red('[ERROR] Папка commands не найдена'));
+            console.log(chalk.red('Папка commands не найдена'));
         }
 
         console.log(chalk.gray('\nНажмите Enter для возврата в меню...'));
