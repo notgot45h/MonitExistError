@@ -3,6 +3,11 @@ const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 require('dotenv').config(); 
 
+const log = (message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[${timestamp}] Бот: ${message}`);
+};
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
@@ -19,7 +24,7 @@ for (const folder of commandFolders) {
     if ('data' in command && 'execute' in command) {
       client.commands.set(command.data.name, command);
     } else {
-      console.log(`[ВНИМАНИЕ] Команда в ${filePath} отсутствует свойство "data" или "execute".`);
+      log(`[ВНИМАНИЕ] Команда в ${filePath} отсутствует свойство "data" или "execute".`);
     }
   }
 }
@@ -36,14 +41,18 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
     await command.execute(interaction);
+    log(`Выполнена команда: ${interaction.commandName}`);
   } catch (error) {
-    console.error(error);
-    await interaction.reply({ content: 'Произошла ошибка при выполнении команды!', ephemeral: true });
+    log(`Ошибка в команде ${interaction.commandName}: ${error.message}`);
+    try {
+      await interaction.reply({ content: 'Произошла ошибка при выполнении команды!', ephemeral: true });
+    } catch (e) {
+    }
   }
 });
 
 client.once(Events.ClientReady, c => {
-  console.log(`Готов! Бот ${c.user.tag} в сети.`);
+  log(`Готов! Бот ${c.user.tag} в сети.`);
 });
 
 client.login(process.env.DISCORD_TOKEN);
