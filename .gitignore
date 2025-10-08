@@ -14,7 +14,8 @@
 # Binaries
 main
 
-# Dependency directories (remove the comment below to include it)
+# Dependency directories
+node_modules/
 vendor/
 /profiles
 
@@ -24,6 +25,7 @@ vendor/
 
 coverage.html
 .env
+package-lock.json
 
 # Configs
 /config.json
