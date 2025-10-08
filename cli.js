@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const chalk = require('chalk');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,13 +8,40 @@ class BotCLI {
     constructor() {
         this.isRunning = false;
         this.botProcess = null;
+        this.pidFile = path.join(__dirname, 'bot.pid');
         this.init();
     }
 
     init() {
         console.clear();
         this.showHeader();
+        this.checkBotStatus();
         this.showMainMenu();
+    }
+
+    checkBotStatus() {
+        try {
+            if (fs.existsSync(this.pidFile)) {
+                const pid = parseInt(fs.readFileSync(this.pidFile, 'utf8'));
+                
+                try {
+                    if (process.platform === 'win32') {
+                        execSync(`tasklist /fi "pid eq ${pid}" | findstr ${pid}`);
+                    } else {
+                        process.kill(pid, 0);
+                    }
+                    this.isRunning = true;
+                    console.log(chalk.yellow('⚠️  Обнаружен запущенный процесс бота!'));
+                } catch (e) {
+                    fs.unlinkSync(this.pidFile);
+                    this.isRunning = false;
+                }
+            } else {
+                this.isRunning = false;
+            }
+        } catch (error) {
+            this.isRunning = false;
+        }
     }
 
     showHeader() {
@@ -60,6 +87,8 @@ class BotCLI {
         console.clear();
         this.showHeader();
         
+        this.checkBotStatus();
+        
         const status = this.isRunning ? 
             chalk.green('Бот запущен') : 
             chalk.red('Бот остановлен');
@@ -77,7 +106,6 @@ class BotCLI {
         ]).then(answers => {
             this.handleAction(answers.action);
         }).catch(error => {
-            console.log(chalk.yellow('Произошла ошибка, возвращаюсь в меню...'));
             setTimeout(() => this.showMainMenu(), 1000);
         });
     }
@@ -110,29 +138,46 @@ class BotCLI {
         }
 
         console.log(chalk.green('Запускаю бота...'));
+        
+        try {
+            this.botProcess = spawn('node', ['index.js'], {
+                stdio: 'ignore',
+                detached: true
+            });
 
-        this.botProcess = spawn('node', ['index.js'], {
-            stdio: 'ignore',
-            detached: true 
-        });
+            fs.writeFileSync(this.pidFile, this.botProcess.pid.toString());
+            
+            this.botProcess.on('error', (error) => {
+                console.log(chalk.red(`Ошибка запуска бота: ${error.message}`));
+                this.isRunning = false;
+                if (fs.existsSync(this.pidFile)) {
+                    fs.unlinkSync(this.pidFile);
+                }
+            });
 
-        this.botProcess.unref();
+            this.botProcess.on('close', (code) => {
+                this.isRunning = false;
+                if (fs.existsSync(this.pidFile)) {
+                    fs.unlinkSync(this.pidFile);
+                }
+            });
 
-        this.botProcess.on('error', (error) => {
-            console.log(chalk.red(`Ошибка запуска бота: ${error.message}`));
-            this.isRunning = false;
-            this.showMainMenu();
-        });
-
-        setTimeout(() => {
             this.isRunning = true;
-            console.log(chalk.green('Бот успешно запущен!'));
-            console.log(chalk.gray('Бот работает в фоновом режиме.'));
-            this.showMainMenu();
-        }, 2000);
+            console.log(chalk.green('Бот успешно запущен! (PID: ' + this.botProcess.pid + ')'));
+            
+            this.botProcess.unref();
+            
+        } catch (error) {
+            console.log(chalk.red(`Ошибка: ${error.message}`));
+            this.isRunning = false;
+        }
+
+        await this.waitForEnter();
     }
 
     async stopBot() {
+        this.checkBotStatus();
+        
         if (!this.isRunning) {
             console.log(chalk.yellow('Бот не запущен!'));
             await this.waitForEnter();
@@ -141,24 +186,36 @@ class BotCLI {
 
         console.log(chalk.yellow('Останавливаю бота...'));
         
-        if (this.botProcess) {
-            try {
-                process.kill(this.botProcess.pid);
-            } catch (e) {
+        try {
+            if (fs.existsSync(this.pidFile)) {
+                const pid = parseInt(fs.readFileSync(this.pidFile, 'utf8'));
+                
+                if (process.platform === 'win32') {
+                    execSync(`taskkill /pid ${pid} /f /t`);
+                } else {
+                    process.kill(pid, 'SIGTERM');
+                }
+                
+                fs.unlinkSync(this.pidFile);
+                console.log(chalk.green('Бот остановлен!'));
+            } else {
+                console.log(chalk.red('PID файл не найден. Бот может быть запущен вручную.'));
+            }
+        } catch (error) {
+            console.log(chalk.red(`Ошибка остановки: ${error.message}`));
+            if (fs.existsSync(this.pidFile)) {
+                fs.unlinkSync(this.pidFile);
             }
         }
-        
+
         this.isRunning = false;
-        this.botProcess = null;
-        console.log(chalk.green('Бот остановлен!'));
-        
-        setTimeout(() => {
-            this.showMainMenu();
-        }, 1000);
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await this.waitForEnter();
     }
 
     async deployCommands() {
-        console.log(chalk.blue('Обновляю слеш-команды...'));
+        console.log(chalk.blue('Обновляю слеш-команды Discord...'));
         
         return new Promise((resolve) => {
             const deployProcess = spawn('node', ['deploy-commands.js'], {
@@ -166,7 +223,7 @@ class BotCLI {
             });
 
             deployProcess.on('close', (code) => {
-                console.log(''); 
+                console.log('');
                 if (code === 0) {
                     console.log(chalk.green('Команды успешно обновлены!'));
                 } else {
@@ -174,6 +231,7 @@ class BotCLI {
                 }
                 
                 setTimeout(() => {
+                    resolve();
                     this.showMainMenu();
                 }, 2000);
             });
@@ -184,8 +242,15 @@ class BotCLI {
         console.clear();
         console.log(chalk.blue.bold('=== Статус системы ===\n'));
         
+        this.checkBotStatus();
+        
         const status = this.isRunning ? chalk.green('Запущен') : chalk.red('Остановлен');
         console.log(`Состояние бота: ${status}`);
+        
+        if (this.isRunning && fs.existsSync(this.pidFile)) {
+            const pid = fs.readFileSync(this.pidFile, 'utf8');
+            console.log(`PID процесса: ${pid}`);
+        }
         
         console.log('\n' + chalk.blue.bold('Конфигурация:'));
         
@@ -252,13 +317,24 @@ class BotCLI {
 
     exit() {
         console.log(chalk.blue('\nЗавершение работы...'));
-        if (this.isRunning && this.botProcess) {
+        
+        this.checkBotStatus();
+        if (this.isRunning) {
             console.log(chalk.yellow('Останавливаю бота...'));
             try {
-                process.kill(this.botProcess.pid);
-            } catch (e) {
+                if (fs.existsSync(this.pidFile)) {
+                    const pid = parseInt(fs.readFileSync(this.pidFile, 'utf8'));
+                    if (process.platform === 'win32') {
+                        execSync(`taskkill /pid ${pid} /f /t`);
+                    } else {
+                        process.kill(pid, 'SIGTERM');
+                    }
+                    fs.unlinkSync(this.pidFile);
+                }
+            } catch (error) {
             }
         }
+        
         process.exit(0);
     }
 }

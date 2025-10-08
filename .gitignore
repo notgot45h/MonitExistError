@@ -31,3 +31,5 @@ package-lock.json
 /config.json
 
 # Storage files
+
+bot.pid
