@@ -324,7 +324,7 @@ class BotCLI {
                 if (fs.statSync(folderPath).isDirectory()) {
                     const commands = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
                     totalCommands += commands.length;
-                    console.log(chalk.blue(`  📁 ${folder}: ${commands.length} команд`));
+                    console.log(chalk.blue(`${folder}: ${commands.length} команд`));
                 }
             });
             
