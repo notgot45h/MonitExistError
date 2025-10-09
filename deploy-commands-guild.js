@@ -26,7 +26,7 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 (async () => {
   try {
     console.log(`Начинается обновление ${commands.length} слеш-команд для гильдии.`);
-    console.log('⚡ Команды для гильдии обновляются мгновенно!');
+    console.log('Команды для гильдии обновляются мгновенно!');
 
     const data = await rest.put(
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
