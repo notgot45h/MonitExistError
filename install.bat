@@ -58,15 +58,12 @@ if %errorlevel% neq 0 (
 
 if not exist ".env" (
     echo.
-    echo Создаю файл .env...
+    echo Создаю файл .env с настройками по умолчанию...
     (
         echo DISCORD_TOKEN=your_bot_token_here
         echo CLIENT_ID=your_client_id_here
         echo GUILD_ID=your_guild_id_here
     ) > .env
-    echo Файл .env создан
-) else (
-    echo Файл .env уже существует
 )
 
 echo.
@@ -76,11 +73,20 @@ echo ========================================
 echo.
 echo Все зависимости установлены!
 echo.
-echo Следующие шаги:
-echo 1. Откройте файл .env в блокноте
-echo 2. Замените your_bot_token_here на токен бота из Bot (Build-A-Bot)
-echo 3. Замените your_client_id_here на ID бота из OAuth2
-echo 4. Замените your_guild_id_here на ID вашей Гильдии
-echo 5. Запустите start.bat
-echo.
-pause
+
+echo Хотите настроить бота сейчас?
+choice /C YN /N /M "Настроить бота сейчас (Y/N)? "
+
+if %errorlevel% equ 1 (
+    echo.
+    echo Запуск настройки...
+    call setup.bat
+    echo.
+    echo Запуск CLI...
+    node cli.js
+) else (
+    echo.
+    echo Вы можете запустить start.bat для настройки и запуска бота.
+    echo.
+    pause
+)

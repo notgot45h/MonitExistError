@@ -31,7 +31,6 @@ class BotCLI {
                         process.kill(pid, 0);
                     }
                     this.isRunning = true;
-                    console.log(chalk.yellow('Обнаружен запущенный процесс бота!'));
                 } catch (e) {
                     fs.unlinkSync(this.pidFile);
                     this.isRunning = false;
@@ -57,6 +56,10 @@ class BotCLI {
             choices.push({ 
                 name: 'Запустить бота', 
                 value: 'start'
+            });
+            choices.push({ 
+                name: 'Изменить настройки бота', 
+                value: 'setup'
             });
         } else {
             choices.push({ 
@@ -122,6 +125,9 @@ class BotCLI {
             case 'stop':
                 await this.stopBot();
                 break;
+            case 'setup':
+                await this.runSetup();
+                break;
             case 'deploy-guild':
                 await this.deployGuildCommands();
                 break;
@@ -137,9 +143,40 @@ class BotCLI {
         }
     }
 
+    async runSetup() {
+        console.log(chalk.blue('Запуск настройки конфигурации...'));
+        
+        return new Promise((resolve) => {
+            const setupProcess = spawn('cmd', ['/c', 'setup.bat'], {
+                stdio: 'inherit'
+            });
+
+            setupProcess.on('close', (code) => {
+                console.log('');
+                if (code === 0) {
+                    console.log(chalk.green('Настройка завершена!'));
+                } else {
+                    console.log(chalk.yellow('Настройка прервана.'));
+                }
+                
+                setTimeout(() => {
+                    resolve();
+                    this.showMainMenu();
+                }, 2000);
+            });
+        });
+    }
+
     async startBot() {
         if (this.isRunning) {
             console.log(chalk.yellow('Бот уже запущен!'));
+            await this.waitForEnter();
+            return;
+        }
+
+        if (!this.checkEnvConfig()) {
+            console.log(chalk.red('ОШИБКА: Настройки бота не заполнены!'));
+            console.log(chalk.yellow('Сначала заполните настройки.'));
             await this.waitForEnter();
             return;
         }
@@ -182,6 +219,23 @@ class BotCLI {
         await this.waitForEnter();
     }
 
+    checkEnvConfig() {
+        try {
+            if (!fs.existsSync('.env')) {
+                return false;
+            }
+
+            const envContent = fs.readFileSync('.env', 'utf8');
+            const hasToken = envContent.includes('DISCORD_TOKEN') && !envContent.includes('your_bot_token_here');
+            const hasClientId = envContent.includes('CLIENT_ID') && !envContent.includes('your_client_id_here');
+            const hasGuildId = envContent.includes('GUILD_ID') && !envContent.includes('your_guild_id_here');
+            
+            return hasToken && hasClientId && hasGuildId;
+        } catch (error) {
+            return false;
+        }
+    }
+
     async stopBot() {
         this.checkBotStatus();
         
@@ -222,6 +276,13 @@ class BotCLI {
     }
 
     async deployGuildCommands() {
+        if (!this.checkEnvConfig()) {
+            console.log(chalk.red('ОШИБКА: Настройки бота не заполнены!'));
+            console.log(chalk.yellow('Сначала заполните настройки.'));
+            await this.waitForEnter();
+            return;
+        }
+
         console.log(chalk.blue('Обновляю слеш-команды для гильдии...'));
         console.log(chalk.yellow('Команды появятся мгновенно!'));
         
@@ -247,6 +308,13 @@ class BotCLI {
     }
 
     async deployGlobalCommands() {
+        if (!this.checkEnvConfig()) {
+            console.log(chalk.red('ОШИБКА: Настройки бота не заполнены!'));
+            console.log(chalk.yellow('Сначала заполните настройки.'));
+            await this.waitForEnter();
+            return;
+        }
+
         console.log(chalk.blue('Обновляю ГЛОБАЛЬНЫЕ слеш-команды...'));
         console.log(chalk.yellow('Команды появятся на всех серверах в течение 24 часов!'));
         
@@ -288,30 +356,30 @@ class BotCLI {
         
         console.log('\n' + chalk.blue.bold('Конфигурация:'));
         
-        if (fs.existsSync('.env')) {
-            console.log(chalk.green('Файл .env найден'));
+        const envValid = this.checkEnvConfig();
+        if (envValid) {
+            console.log(chalk.green('✓ Все настройки заполнены'));
             
             try {
                 const envContent = fs.readFileSync('.env', 'utf8');
-                const hasToken = envContent.includes('DISCORD_TOKEN') && !envContent.includes('your_bot_token_here');
-                const hasClientId = envContent.includes('CLIENT_ID') && !envContent.includes('your_client_id_here');
-                const hasGuildId = envContent.includes('GUILD_ID') && !envContent.includes('your_guild_id_here');
-                
-                console.log(hasToken ? 
-                    chalk.green('Токен бота настроен') : 
-                    chalk.red('Токен бота не настроен'));
-                console.log(hasClientId ? 
-                    chalk.green('CLIENT_ID настроен') : 
-                    chalk.red('CLIENT_ID не настроен'));
-                console.log(hasGuildId ? 
-                    chalk.green('GUILD_ID настроен') : 
-                    chalk.red('GUILD_ID не настроен'));
-                    
+                const lines = envContent.split('\n');
+                lines.forEach(line => {
+                    if (line.startsWith('DISCORD_TOKEN=')) {
+                        const token = line.replace('DISCORD_TOKEN=', '');
+                        console.log(`Токен: ${token.substring(0, 10)}...`);
+                    } else if (line.startsWith('CLIENT_ID=')) {
+                        const clientId = line.replace('CLIENT_ID=', '');
+                        console.log(`CLIENT_ID: ${clientId}`);
+                    } else if (line.startsWith('GUILD_ID=')) {
+                        const guildId = line.replace('GUILD_ID=', '');
+                        console.log(`GUILD_ID: ${guildId}`);
+                    }
+                });
             } catch (e) {
                 console.log(chalk.yellow('Не удалось прочитать .env файл'));
             }
         } else {
-            console.log(chalk.red('Файл .env не найден'));
+            console.log(chalk.red('✗ Настройки не заполнены или файл .env отсутствует'));
         }
 
         console.log('\n' + chalk.blue.bold('Команды:'));
