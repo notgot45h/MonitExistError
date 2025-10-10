@@ -248,7 +248,7 @@ class BotCLI {
 
     async deployGlobalCommands() {
         console.log(chalk.blue('Обновляю ГЛОБАЛЬНЫЕ слеш-команды...'));
-        console.log(chalk.yellow('Команды появятся на всех серверах в течение часа!'));
+        console.log(chalk.yellow('Команды появятся на всех серверах в течение 24 часов!'));
         
         return new Promise((resolve) => {
             const deployProcess = spawn('node', ['deploy-commands-global.js'], {
@@ -259,7 +259,7 @@ class BotCLI {
                 console.log('');
                 if (code === 0) {
                     console.log(chalk.green('Глобальные команды успешно отправлены на обновление!'));
-                    console.log(chalk.blue('Команды появятся на всех серверах в течение часа.'));
+                    console.log(chalk.blue('Команды появятся на всех серверах в течение 24 часов.'));
                 } else {
                     console.log(chalk.red('Ошибка при глобальном обновлении команд.'));
                 }
