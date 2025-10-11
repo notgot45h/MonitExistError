@@ -51,7 +51,7 @@ if %ENV_VALID% neq 1 (
     exit /b 1
 )
 
-echo Все настройки проверены. Запуск CLI...
+echo Все настройки проверены на частичное наличие. Запуск CLI Controller...
 echo.
 node cli.js
 pause
