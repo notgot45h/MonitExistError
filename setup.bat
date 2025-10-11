@@ -16,16 +16,16 @@ echo Заполните настройки бота:
 echo.
 
 :INPUT_TOKEN
-set /p DISCORD_TOKEN="Введите Токен Бота: "
+set /p DISCORD_TOKEN="Bot Token: "
 if "!DISCORD_TOKEN!"=="" (
-    echo Токен не может быть пустым!
+    echo Bot Token не может быть пустым!
     goto INPUT_TOKEN
 )
  
 :INPUT_CLIENT
-set /p CLIENT_ID="Введите ID Бота: "
+set /p CLIENT_ID="Bot ID: "
 if "!CLIENT_ID!"=="" (
-    echo ID приложения не может быть пустым!
+    echo Bot ID не может быть пустым!
     goto INPUT_CLIENT
 )
 
@@ -49,14 +49,14 @@ if defined CLIENT_ID (
 set "CLIENT_ID=!CLEANED_CLIENT!"
 
 if "!CLIENT_ID!"=="" (
-    echo ОШИБКА: Не удалось извлечь цифры из CLIENT_ID!
+    echo ОШИБКА: Не удалось извлечь цифры из Bot ID!
     goto INPUT_CLIENT
 )
 
 :INPUT_GUILD
-set /p GUILD_ID="Введите ID Гильдии: "
+set /p GUILD_ID="Server ID: "
 if "!GUILD_ID!"=="" (
-    echo ID сервера не может быть пустым!
+    echo Server ID не может быть пустым!
     goto INPUT_GUILD
 )
 
@@ -80,7 +80,7 @@ if defined GUILD_ID (
 set "GUILD_ID=!CLEANED_GUILD!"
 
 if "!GUILD_ID!"=="" (
-    echo ОШИБКА: Не удалось извлечь цифры из GUILD_ID!
+    echo ОШИБКА: Не удалось извлечь цифры из Server ID!
     goto INPUT_GUILD
 )
 
@@ -95,8 +95,8 @@ echo ========================================
 echo.
 echo Файл .env успешно создан!
 echo.
-echo Токен: !DISCORD_TOKEN!
-echo ID Бота: !CLIENT_ID!
-echo ID Гильдии: !GUILD_ID!
+echo Bot Token: !DISCORD_TOKEN!
+echo Bot ID: !CLIENT_ID!
+echo Server ID: !GUILD_ID!
 echo.
 pause
