@@ -318,8 +318,8 @@ Discord Bot Manager - Справка по командам:
 
     async createDefaultEnv() {
         const defaultEnv = `DISCORD_TOKEN=your_bot_token_here
-    CLIENT_ID=your_client_id_here
-    GUILD_ID=your_guild_id_here`;
+CLIENT_ID=your_client_id_here
+GUILD_ID=your_guild_id_here`;
 
         fs.writeFileSync(this.envFile, defaultEnv);
         console.log(chalk.yellow('Создан файл .env с настройками по умолчанию'));
@@ -368,8 +368,8 @@ Discord Bot Manager - Справка по командам:
     const cleanGuildId = answers.guildId.replace(/\D/g, '');
 
     const envContent = `DISCORD_TOKEN=${answers.token}
-    CLIENT_ID=${cleanClientId}
-    GUILD_ID=${cleanGuildId}`;
+CLIENT_ID=${cleanClientId}
+GUILD_ID=${cleanGuildId}`;
 
     fs.writeFileSync(this.envFile, envContent);
 
