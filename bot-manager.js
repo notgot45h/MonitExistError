@@ -115,7 +115,7 @@ Discord Bot Manager - Справка по командам:
                 new inquirer.Separator(),
                 { name: 'Настроить бота', value: 'setup' },
                 { name: 'Установить зависимости', value: 'install' },
-                { name: 'зависимости', value: 'update' },
+                { name: 'Обновить зависимости', value: 'update' },
                 { name: 'Сброс настроек', value: 'reset' },
                 new inquirer.Separator(),
                 { name: 'Деплой команд (гильдия)', value: 'deploy-guild' },
@@ -134,7 +134,6 @@ Discord Bot Manager - Справка по командам:
         console.log(chalk.cyan.bold(`
 ╔══════════════════════════════════════╗
 ║         Discord Bot Manager          ║  
-║       Управление в одном месте!      ║
 ╚══════════════════════════════════════╝
         `));
     }
@@ -144,12 +143,12 @@ Discord Bot Manager - Справка по командам:
         const systemStatus = await this.getSystemStatus();
         
         console.log(chalk.blue('Текущий статус системы:'));
-        console.log(chalk.white(`┌──────────────────┬──────────────────┐`));
-        console.log(chalk.white(`│ Бот              │ ${systemStatus.bot} │`));
-        console.log(chalk.white(`│ Зависимости      │ ${systemStatus.dependencies} │`));
-        console.log(chalk.white(`│ Конфигурация     │ ${systemStatus.config} │`));
-        console.log(chalk.white(`│ Node.js          │ ${systemStatus.node} │`));
-        console.log(chalk.white(`└──────────────────┴──────────────────┘\n`));
+        console.log(chalk.white(`┌──────────────────┐`));
+        console.log(chalk.white(`│ Бот              │ ${systemStatus.bot}`));
+        console.log(chalk.white(`│ Зависимости      │ ${systemStatus.dependencies}`));
+        console.log(chalk.white(`│ Конфигурация     │ ${systemStatus.config}`));
+        console.log(chalk.white(`│ Node.js          │ ${systemStatus.node}`));
+        console.log(chalk.white(`└──────────────────┘\n`));
     }
 
     async getSystemStatus() {
@@ -163,7 +162,7 @@ Discord Bot Manager - Справка по командам:
             chalk.green('Настроено') : chalk.red('Не настроено');
         
         const nodeStatus = await this.checkNodeJS() ? 
-            chalk.green('Найден' + process.version) : chalk.red('Не найден');
+            chalk.green('Найден версии: ' + process.version) : chalk.red('Не найден');
 
         return { bot: botStatus, dependencies: depsStatus, config: configStatus, node: nodeStatus };
     }
@@ -520,12 +519,12 @@ Discord Bot Manager - Справка по командам:
 
         const status = await this.getSystemStatus();
         
-        console.log(chalk.white('┌──────────────────┬──────────────────┐'));
-        console.log(chalk.white(`│ Бот              │ ${status.bot} │`));
-        console.log(chalk.white(`│ Зависимости      │ ${status.dependencies} │`));
-        console.log(chalk.white(`│ Конфигурация     │ ${status.config} │`));
-        console.log(chalk.white(`│ Node.js          │ ${status.node} │`));
-        console.log(chalk.white('└──────────────────┴──────────────────┘'));
+        console.log(chalk.white('┌──────────────────┐'));
+        console.log(chalk.white(`│ Бот              │ ${status.bot}`));
+        console.log(chalk.white(`│ Зависимости      │ ${status.dependencies}`));
+        console.log(chalk.white(`│ Конфигурация     │ ${status.config}`));
+        console.log(chalk.white(`│ Node.js          │ ${status.node}`));
+        console.log(chalk.white('└──────────────────┘'));
 
         console.log(chalk.cyan('\nДетали конфигурации:'));
         if (await this.validateConfig()) {
