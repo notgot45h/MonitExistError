@@ -490,7 +490,7 @@ GUILD_ID=${cleanGuildId}`;
     }
 
     async resetConfiguration() {
-        console.log(chalk.cyan('\n🗑 Сброс конфигурации...'));
+        console.log(chalk.cyan('\nСброс конфигурации...'));
 
         if (fs.existsSync(this.envFile)) {
             fs.unlinkSync(this.envFile);
