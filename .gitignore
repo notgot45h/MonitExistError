@@ -26,6 +26,7 @@ vendor/
 coverage.html
 .env
 package-lock.json
+update-config.json
 
 # Configs
 /config.json
