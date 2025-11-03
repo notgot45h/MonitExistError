@@ -26,10 +26,10 @@ vendor/
 coverage.html
 .env
 package-lock.json
-update-config.json
 
 # Configs
 /config.json
+/update-config.json
 
 # Storage files
 
