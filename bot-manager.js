@@ -11,7 +11,7 @@ class UpdateSystem {
         this.configFile = path.join(__dirname, 'update-config.json');
         
         this.repository = 'https://github.com/notgot45h/MonitExistError.git';
-        this.branch = 'Automatic-Update';
+        this.branch = 'main';
         
         this.defaultConfig = {
             autoUpdate: false,
