@@ -1,17 +1,6 @@
 {
-  "name": "discord-bot",
-  "version": "2.0.0",
-  "description": "Discord Bot with unified CLI manager - No BAT files!",
-  "main": "bot-manager.js",
-  "author": "Your Name",
-  "license": "MIT",
-  "keywords": [
-    "discord",
-    "bot",
-    "cli",
-    "manager",
-    "javascript"
-  ],
+  "_comment": "короче, потом напишу",
+  
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=7.0.0"
@@ -35,9 +24,5 @@
     "status": "node bot-manager.js --status",
     "help": "node bot-manager.js --help"
   },
-  "repository": {
-    "type": "git",
-    "url": "your-repo-url"
-  },
-  "homepage": "your-repo-url#readme"
+"__comment": "Ну и дичь)"
 }
