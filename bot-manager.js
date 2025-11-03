@@ -432,7 +432,7 @@ class UpdateSystem {
         if (await this.checkRepository()) {
             const hasUpdates = await this.checkForUpdates();
             if (hasUpdates) {
-                console.log(chalk.yellow('\nДоступны обновления! Используйте "Обновить бота"'));
+                console.log(chalk.yellow('\nДоступны обновления! Используйте "Обновить бота из Git"'));
             }
         }
     }
