@@ -19,6 +19,7 @@ class UpdateSystem {
             lastUpdate: null
         };
         this.loadConfig();
+
     }
 
     loadConfig() {
@@ -235,29 +236,39 @@ class UpdateSystem {
     }
 
     async checkForUpdates() {
-        if (!await this.checkRepository()) {
-            console.log(chalk.yellow('Папка не является Git репозиторием'));
-            return false;
-        }
+    if (!await this.checkRepository()) {
+        console.log(chalk.yellow('Папка не является Git репозиторием'));
+        return false;
+    }
 
-        try {
-            console.log(chalk.blue('Проверка обновлений...'));
-            
-            await this.runCommand('git fetch', 'Получение информации об обновлениях...');
-            
-            const status = execSync('git status -uno').toString();
-            
-            if (status.includes('Your branch is up to date')) {
-                console.log(chalk.green('Бот обновлен до последней версии!'));
-                return false;
-            } else {
-                console.log(chalk.yellow('Доступно обновление!'));
-                return true;
-            }
-        } catch (error) {
-            console.log(chalk.red('Ошибка проверки обновлений:'), error.message);
+    try {
+        console.log(chalk.blue('Проверка обновлений...'));
+        
+        await this.runCommand('git fetch', 'Получение информации об обновлениях...');
+        
+        const status = execSync('git status -s --porcelain').toString();
+        
+        const ignoredFiles = ['update-config.json', '.env', 'bot.pid'];
+        const relevantChanges = status.split('\n')
+            .filter(line => line.trim())
+            .filter(line => {
+                const fileName = line.substring(3).trim();
+                return !ignoredFiles.some(ignored => fileName.includes(ignored));
+            });
+
+        if (relevantChanges.length === 0) {
+            console.log(chalk.green('Бот обновлен до последней версии!'));
             return false;
+        } else {
+            console.log(chalk.yellow('Доступно обновление!'));
+            console.log(chalk.gray('Изменения:'));
+            relevantChanges.forEach(change => console.log(chalk.gray(`  ${change}`)));
+            return true;
         }
+    } catch (error) {
+        console.log(chalk.red('Ошибка проверки обновлений:'), error.message);
+        return false;
+    }
     }
 
     async runUpdate() {
@@ -276,6 +287,7 @@ class UpdateSystem {
                     fs.copyFileSync(file, path.join(tempBackupDir, file));
                 }
             }
+            
         } catch (error) {
             console.log(chalk.yellow('Не удалось создать временный бэкап критических файлов'));
         }
