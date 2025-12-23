@@ -13,29 +13,42 @@ class LocaleManager {
         this.currentLanguage = this.defaultLanguage;
         this.locales = {};
         this.availableLanguages = [];
+        this.languageDisplayNames = {};
         
-        this.loadAvailableLanguages();
+        this.initializeLocales();
         this.loadConfig();
         this.loadLocale(this.currentLanguage);
     }
 
-    loadAvailableLanguages() {
+    initializeLocales() {
         try {
             if (!fs.existsSync(this.localesDir)) {
                 fs.mkdirSync(this.localesDir, { recursive: true });
                 console.log(chalk.yellow('Created locales directory'));
             }
             
-            const files = fs.readdirSync(this.localesDir);
-            this.availableLanguages = files
-                .filter(file => file.endsWith('.json'))
-                .map(file => file.replace('.json', ''));
+            this.loadAvailableLanguages();
             
             if (this.availableLanguages.length === 0) {
+                console.log(chalk.yellow('No locale files found. Creating default locales...'));
                 this.createDefaultLocales();
-                this.availableLanguages = ['en', 'ru'];
+                this.loadAvailableLanguages();
             }
             
+            console.log(chalk.blue(`Available languages: ${this.availableLanguages.join(', ')}`));
+        } catch (error) {
+            console.log(chalk.red('Error initializing locales:'), error.message);
+            this.availableLanguages = [this.defaultLanguage];
+        }
+    }
+
+    loadAvailableLanguages() {
+        try {
+            const files = fs.readdirSync(this.localesDir);
+            this.availableLanguages = files
+                .filter(file => file.endsWith('.json') && file !== 'language-config.json')
+                .map(file => file.replace('.json', ''))
+                .sort();
         } catch (error) {
             console.log(chalk.red('Error loading available languages:'), error.message);
             this.availableLanguages = [this.defaultLanguage];
@@ -43,153 +56,163 @@ class LocaleManager {
     }
 
     createDefaultLocales() {
-        const defaultEn = {
-            "bot_manager": {
-                "title": "Discord Bot Manager",
-                "status": "System Status",
-                "bot": "Bot",
-                "dependencies": "Dependencies",
-                "configuration": "Configuration",
-                "nodejs": "Node.js",
-                "running": "Running",
-                "stopped": "Stopped",
-                "installed": "Installed",
-                "missing": "Missing",
-                "configured": "Configured",
-                "not_configured": "Not Configured",
-                "found_version": "Found version: {0}",
-                "current_status": "Current system status:",
-                "select_action": "Select action:",
-                "press_enter": "Press Enter to continue...",
-                "shutting_down": "Shutting down..."
-            },
-            "menu": {
-                "start_bot": "Start bot",
-                "stop_bot": "Stop bot",
-                "setup_bot": "Configure bot",
-                "install_deps": "Install dependencies",
-                "update_deps": "Update dependencies",
-                "reset_config": "Reset configuration",
-                "deploy_guild": "Deploy commands (guild)",
-                "deploy_global": "Deploy commands (global)",
-                "system_status": "System status",
-                "change_language": "Change language",
-                "exit": "Exit"
-            },
-            "messages": {
-                "bot_started": "Bot started successfully! (PID: {0})",
-                "bot_stopped": "Bot stopped!",
-                "bot_already_running": "Bot is already running!",
-                "bot_not_running": "Bot is not running!",
-                "deps_installed": "Dependencies installed successfully!",
-                "config_saved": "Configuration saved!",
-                "config_reset": "Configuration reset!",
-                "commands_deployed": "Commands deployed successfully!"
-            },
-            "errors": {
-                "failed_to_start": "Failed to start bot: {0}",
-                "failed_to_stop": "Failed to stop bot: {0}",
-                "failed_to_install": "Failed to install dependencies!",
-                "failed_to_update": "Failed to update dependencies!",
-                "failed_to_deploy": "Failed to deploy commands: {0}"
-            },
-            "prompts": {
-                "enter_token": "Enter Discord Bot Token:",
-                "token_empty": "Token cannot be empty!",
-                "enter_client_id": "Enter Bot Client ID:",
-                "enter_guild_id": "Enter Server ID:",
-                "client_id_invalid": "Client ID must contain numbers!",
-                "guild_id_invalid": "Server ID must contain numbers!",
-                "create_new_config": "Create new configuration?",
-                "continue": "Press Enter...",
-                "select_language": "Select language:"
-            },
-            "help": {
-                "title": "Discord Bot Manager - Command Help:",
-                "main_commands": "Main commands:",
-                "auto_commands": "Automatic commands:",
-                "examples": "Examples:"
+        try {
+            const defaultLocales = {
+                'en': {
+                    "language_info": {
+                        "display_name": "English",
+                        "native_name": "English"
+                    },
+                    "bot_manager": {
+                        "title": "Discord Bot Manager",
+                        "status": "System Status",
+                        "bot": "Bot",
+                        "dependencies": "Dependencies",
+                        "configuration": "Configuration",
+                        "nodejs": "Node.js",
+                        "running": "Running",
+                        "stopped": "Stopped",
+                        "installed": "Installed",
+                        "missing": "Missing",
+                        "configured": "Configured",
+                        "not_configured": "Not Configured",
+                        "found_version": "Found version: {0}",
+                        "current_status": "Current system status:",
+                        "select_action": "Select action:",
+                        "press_enter": "Press Enter to continue...",
+                        "shutting_down": "Shutting down..."
+                    },
+                    "menu": {
+                        "start_bot": "Start bot",
+                        "stop_bot": "Stop bot",
+                        "setup_bot": "Configure bot",
+                        "install_deps": "Install dependencies",
+                        "update_deps": "Update dependencies",
+                        "reset_config": "Reset configuration",
+                        "deploy_guild": "Deploy commands (guild)",
+                        "deploy_global": "Deploy commands (global)",
+                        "system_status": "System status",
+                        "change_language": "Change language",
+                        "exit": "Exit"
+                    },
+                    "messages": {
+                        "bot_started": "Bot started successfully! (PID: {0})",
+                        "bot_stopped": "Bot stopped!",
+                        "bot_already_running": "Bot is already running!",
+                        "bot_not_running": "Bot is not running!",
+                        "deps_installed": "Dependencies installed successfully!",
+                        "config_saved": "Configuration saved!",
+                        "config_reset": "Configuration reset!",
+                        "commands_deployed": "Commands deployed successfully!"
+                    },
+                    "errors": {
+                        "failed_to_start": "Failed to start bot: {0}",
+                        "failed_to_stop": "Failed to stop bot: {0}",
+                        "failed_to_install": "Failed to install dependencies!",
+                        "failed_to_update": "Failed to update dependencies!",
+                        "failed_to_deploy": "Failed to deploy commands: {0}"
+                    },
+                    "prompts": {
+                        "enter_token": "Enter Discord Bot Token:",
+                        "token_empty": "Token cannot be empty!",
+                        "enter_client_id": "Enter Bot Client ID:",
+                        "enter_guild_id": "Enter Server ID:",
+                        "client_id_invalid": "Client ID must contain numbers!",
+                        "guild_id_invalid": "Server ID must contain numbers!",
+                        "create_new_config": "Create new configuration?",
+                        "continue": "Press Enter...",
+                        "select_language": "Select language:"
+                    },
+                    "help": {
+                        "title": "Discord Bot Manager - Command Help:",
+                        "main_commands": "Main commands:",
+                        "auto_commands": "Automatic commands:",
+                        "examples": "Examples:"
+                    }
+                },
+                'ru': {
+                    "language_info": {
+                        "display_name": "Russian",
+                        "native_name": "Русский"
+                    },
+                    "bot_manager": {
+                        "title": "Менеджер Discord бота",
+                        "status": "Статус системы",
+                        "bot": "Бот",
+                        "dependencies": "Зависимости",
+                        "configuration": "Конфигурация",
+                        "nodejs": "Node.js",
+                        "running": "Запущен",
+                        "stopped": "Остановлен",
+                        "installed": "Установлены",
+                        "missing": "Отсутствуют",
+                        "configured": "Настроено",
+                        "not_configured": "Не настроено",
+                        "found_version": "Найден версии: {0}",
+                        "current_status": "Текущий статус системы:",
+                        "select_action": "Выберите действие:",
+                        "press_enter": "Нажмите Enter для продолжения...",
+                        "shutting_down": "Завершение работы..."
+                    },
+                    "menu": {
+                        "start_bot": "Запустить бота",
+                        "stop_bot": "Остановить бота",
+                        "setup_bot": "Настроить бота",
+                        "install_deps": "Установить зависимости",
+                        "update_deps": "Обновить зависимости",
+                        "reset_config": "Сброс настроек",
+                        "deploy_guild": "Деплой команд (гильдия)",
+                        "deploy_global": "Деплой команд (глобально)",
+                        "system_status": "Статус системы",
+                        "change_language": "Сменить язык",
+                        "exit": "Выход"
+                    },
+                    "messages": {
+                        "bot_started": "Бот успешно запущен! (PID: {0})",
+                        "bot_stopped": "Бот остановлен!",
+                        "bot_already_running": "Бот уже запущен!",
+                        "bot_not_running": "Бот не запущен!",
+                        "deps_installed": "Зависимости успешно установлены!",
+                        "config_saved": "Настройки сохранены!",
+                        "config_reset": "Конфигурация сброшена!",
+                        "commands_deployed": "Команды успешно отправлены!"
+                    },
+                    "errors": {
+                        "failed_to_start": "Ошибка запуска бота: {0}",
+                        "failed_to_stop": "Ошибка остановки бота: {0}",
+                        "failed_to_install": "Ошибка установки зависимостей!",
+                        "failed_to_update": "Ошибка обновления зависимостей!",
+                        "failed_to_deploy": "Ошибка деплоя команд: {0}"
+                    },
+                    "prompts": {
+                        "enter_token": "Введите Discord Token бота:",
+                        "token_empty": "Token не может быть пустым!",
+                        "enter_client_id": "Введите Client ID бота:",
+                        "enter_guild_id": "Введите Server ID:",
+                        "client_id_invalid": "Client ID должен содержать цифры!",
+                        "guild_id_invalid": "Server ID должен содержать цифры!",
+                        "create_new_config": "Создать новую конфигурацию?",
+                        "continue": "Нажмите Enter...",
+                        "select_language": "Выберите язык:"
+                    },
+                    "help": {
+                        "title": "Discord Bot Manager - Справка по командам:",
+                        "main_commands": "Основные команды:",
+                        "auto_commands": "Автоматические команды:",
+                        "examples": "Примеры:"
+                    }
+                }
+            };
+
+            for (const [langCode, localeData] of Object.entries(defaultLocales)) {
+                const localeFile = path.join(this.localesDir, `${langCode}.json`);
+                fs.writeFileSync(localeFile, JSON.stringify(localeData, null, 2));
+                console.log(chalk.green(`Created locale file: ${langCode}.json`));
             }
-        };
-        
-        fs.writeFileSync(
-            path.join(this.localesDir, 'en.json'),
-            JSON.stringify(defaultEn, null, 2)
-        );
-        
-        const defaultRu = {
-            "bot_manager": {
-                "title": "Менеджер Discord бота",
-                "status": "Статус системы",
-                "bot": "Бот",
-                "dependencies": "Зависимости",
-                "configuration": "Конфигурация",
-                "nodejs": "Node.js",
-                "running": "Запущен",
-                "stopped": "Остановлен",
-                "installed": "Установлены",
-                "missing": "Отсутствуют",
-                "configured": "Настроено",
-                "not_configured": "Не настроено",
-                "found_version": "Найден версии: {0}",
-                "current_status": "Текущий статус системы:",
-                "select_action": "Выберите действие:",
-                "press_enter": "Нажмите Enter для продолжения...",
-                "shutting_down": "Завершение работы..."
-            },
-            "menu": {
-                "start_bot": "Запустить бота",
-                "stop_bot": "Остановить бота",
-                "setup_bot": "Настроить бота",
-                "install_deps": "Установить зависимости",
-                "update_deps": "Обновить зависимости",
-                "reset_config": "Сброс настроек",
-                "deploy_guild": "Деплой команд (гильдия)",
-                "deploy_global": "Деплой команд (глобально)",
-                "system_status": "Статус системы",
-                "change_language": "Сменить язык",
-                "exit": "Выход"
-            },
-            "messages": {
-                "bot_started": "Бот успешно запущен! (PID: {0})",
-                "bot_stopped": "Бот остановлен!",
-                "bot_already_running": "Бот уже запущен!",
-                "bot_not_running": "Бот не запущен!",
-                "deps_installed": "Зависимости успешно установлены!",
-                "config_saved": "Настройки сохранены!",
-                "config_reset": "Конфигурация сброшена!",
-                "commands_deployed": "Команды успешно отправлены!"
-            },
-            "errors": {
-                "failed_to_start": "Ошибка запуска бота: {0}",
-                "failed_to_stop": "Ошибка остановки бота: {0}",
-                "failed_to_install": "Ошибка установки зависимостей!",
-                "failed_to_update": "Ошибка обновления зависимостей!",
-                "failed_to_deploy": "Ошибка деплоя команд: {0}"
-            },
-            "prompts": {
-                "enter_token": "Введите Discord Token бота:",
-                "token_empty": "Token не может быть пустым!",
-                "enter_client_id": "Введите Client ID бота:",
-                "enter_guild_id": "Введите Server ID:",
-                "client_id_invalid": "Client ID должен содержать цифры!",
-                "guild_id_invalid": "Server ID должен содержать цифры!",
-                "create_new_config": "Создать новую конфигурацию?",
-                "continue": "Нажмите Enter...",
-                "select_language": "Выберите язык:"
-            },
-            "help": {
-                "title": "Discord Bot Manager - Справка по командам:",
-                "main_commands": "Основные команды:",
-                "auto_commands": "Автоматические команды:",
-                "examples": "Примеры:"
-            }
-        };
-        
-        fs.writeFileSync(
-            path.join(this.localesDir, 'ru.json'),
-            JSON.stringify(defaultRu, null, 2)
-        );
+            
+        } catch (error) {
+            console.log(chalk.red('Error creating default locales:'), error.message);
+        }
     }
 
     loadConfig() {
@@ -199,6 +222,7 @@ class LocaleManager {
                 this.currentLanguage = config.language || this.defaultLanguage;
                 
                 if (!this.availableLanguages.includes(this.currentLanguage)) {
+                    console.log(chalk.yellow(`Configured language "${this.currentLanguage}" not found. Using default.`));
                     this.currentLanguage = this.defaultLanguage;
                     this.saveConfig();
                 }
@@ -215,7 +239,8 @@ class LocaleManager {
         try {
             const config = {
                 language: this.currentLanguage,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                availableLanguages: this.availableLanguages
             };
             fs.writeFileSync(this.configFile, JSON.stringify(config, null, 2));
         } catch (error) {
@@ -230,6 +255,7 @@ class LocaleManager {
             if (!fs.existsSync(localeFile)) {
                 console.log(chalk.yellow(`Locale file not found: ${languageCode}.json`));
                 if (languageCode !== this.defaultLanguage) {
+                    console.log(chalk.yellow(`Falling back to default language: ${this.defaultLanguage}`));
                     return this.loadLocale(this.defaultLanguage);
                 }
                 return false;
@@ -238,6 +264,12 @@ class LocaleManager {
             const localeData = JSON.parse(fs.readFileSync(localeFile, 'utf8'));
             this.locales[languageCode] = localeData;
             this.currentLanguage = languageCode;
+            
+            if (localeData.language_info) {
+                this.languageDisplayNames[languageCode] = localeData.language_info;
+            }
+            
+            this.validateLocaleStructure(languageCode, localeData);
             
             return true;
         } catch (error) {
@@ -249,10 +281,66 @@ class LocaleManager {
         }
     }
 
+    validateLocaleStructure(languageCode, localeData) {
+        const requiredSections = ['bot_manager', 'menu', 'messages', 'errors', 'prompts'];
+        const missingSections = [];
+        
+        for (const section of requiredSections) {
+            if (!localeData[section]) {
+                missingSections.push(section);
+            }
+        }
+        
+        if (missingSections.length > 0) {
+            console.log(chalk.yellow(`Locale "${languageCode}" missing sections: ${missingSections.join(', ')}`));
+        }
+        
+        if (!localeData.language_info || !localeData.language_info.display_name) {
+            console.log(chalk.yellow(`Locale "${languageCode}" missing language_info section or display_name`));
+        }
+    }
+
     get(key, ...placeholders) {
         try {
             const keys = key.split('.');
             let value = this.locales[this.currentLanguage];
+            
+            if (!value) {
+                value = this.locales[this.defaultLanguage];
+            }
+            
+            for (const k of keys) {
+                if (value && value[k] !== undefined) {
+                    value = value[k];
+                } else {
+                    if (this.currentLanguage !== this.defaultLanguage) {
+                        const defaultValue = this.getFromLocale(this.defaultLanguage, key, ...placeholders);
+                        if (defaultValue !== key) {
+                            return defaultValue;
+                        }
+                    }
+                    return key;
+                }
+            }
+            
+            if (typeof value === 'string' && placeholders.length > 0) {
+                return value.replace(/{(\d+)}/g, (match, index) => {
+                    return placeholders[index] !== undefined ? placeholders[index] : match;
+                });
+            }
+            
+            return value || key;
+        } catch (error) {
+            return key;
+        }
+    }
+
+    getFromLocale(languageCode, key, ...placeholders) {
+        try {
+            const keys = key.split('.');
+            let value = this.locales[languageCode];
+            
+            if (!value) return key;
             
             for (const k of keys) {
                 if (value && value[k] !== undefined) {
@@ -275,21 +363,57 @@ class LocaleManager {
     }
 
     setLanguage(languageCode) {
+        this.loadAvailableLanguages();
+        
         if (this.availableLanguages.includes(languageCode)) {
             if (this.loadLocale(languageCode)) {
                 this.currentLanguage = languageCode;
                 this.saveConfig();
+                console.log(chalk.green(`Language changed to: ${languageCode.toUpperCase()}`));
                 return true;
             }
+        } else {
+            console.log(chalk.red(`Language "${languageCode}" is not available. Available: ${this.availableLanguages.join(', ')}`));
         }
         return false;
     }
 
+    refreshAvailableLanguages() {
+        this.loadAvailableLanguages();
+        this.languageDisplayNames = {};
+        return this.availableLanguages;
+    }
+
     getLanguageList() {
-        return this.availableLanguages.map(lang => ({
-            name: lang.toUpperCase(),
-            value: lang
-        }));
+        const languageChoices = [];
+        
+        for (const langCode of this.availableLanguages) {
+            let displayName = null;
+            
+            if (this.languageDisplayNames[langCode]) {
+                displayName = `${this.languageDisplayNames[langCode].native_name} (${this.languageDisplayNames[langCode].display_name})`;
+            } else {
+                try {
+                    const localeFile = path.join(this.localesDir, `${langCode}.json`);
+                    if (fs.existsSync(localeFile)) {
+                        const data = JSON.parse(fs.readFileSync(localeFile, 'utf8'));
+                        if (data.language_info) {
+                            this.languageDisplayNames[langCode] = data.language_info;
+                            displayName = `${data.language_info.native_name} (${data.language_info.display_name})`;
+                        }
+                    }
+                } catch (error) {
+                    console.log(chalk.yellow(`Error reading language info for ${langCode}:`), error.message);
+                }
+            }
+            
+            languageChoices.push({
+                name: displayName || langCode.toUpperCase(),
+                value: langCode
+            });
+        }
+        
+        return languageChoices;
     }
 
     getCurrentLanguage() {
@@ -369,6 +493,9 @@ class BotManager {
                 case '-h':
                     this.showHelp();
                     break;
+                case '--refresh-locales':
+                    await this.refreshLocales();
+                    break;
                 default:
                     console.log(chalk.yellow(`Unknown argument: ${arg}`));
                     this.showHelp();
@@ -394,6 +521,7 @@ class BotManager {
         console.log(chalk.green('  --reset') + '                - ' + 'Reset configuration');
         console.log(chalk.green('  --status') + '               - ' + 'System status');
         console.log(chalk.green('  --change-language, -l') + '   - ' + 'Change interface language');
+        console.log(chalk.green('  --refresh-locales') + '       - ' + 'Refresh available locales');
         console.log(chalk.green('  --help, -h') + '             - ' + 'This help\n');
         
         console.log(this.locale.get('help.examples') + ':');
@@ -431,6 +559,12 @@ class BotManager {
         });
 
         await this.handleAction(action);
+    }
+
+    async refreshLocales() {
+        console.log(chalk.cyan('\nRefreshing available locales...'));
+        const availableLanguages = this.locale.refreshAvailableLanguages();
+        console.log(chalk.green(`Found ${availableLanguages.length} locales: ${availableLanguages.join(', ')}`));
     }
 
     async checkSystemStatus() {
@@ -533,7 +667,14 @@ class BotManager {
     }
 
     async changeLanguage() {
+        this.locale.refreshAvailableLanguages();
+        
         const languageChoices = this.locale.getLanguageList();
+        
+        if (languageChoices.length === 0) {
+            console.log(chalk.red('No languages available!'));
+            return;
+        }
         
         const { selectedLanguage } = await inquirer.prompt({
             type: 'list',
@@ -542,12 +683,7 @@ class BotManager {
             choices: languageChoices
         });
         
-        if (this.locale.setLanguage(selectedLanguage)) {
-            console.log(chalk.green(`Language changed to: ${selectedLanguage.toUpperCase()}`));
-            console.log(chalk.blue('Interface language has been updated.'));
-        } else {
-            console.log(chalk.red('Failed to change language'));
-        }
+        this.locale.setLanguage(selectedLanguage);
     }
 
     async checkNodeJS() {
