@@ -1,4 +1,8 @@
 {
+  "language_info": {
+    "display_name": "Russian",
+    "native_name": "Русский"
+  },
   "bot_manager": {
     "title": "Менеджер Discord бота",
     "status": "Статус системы",

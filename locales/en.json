@@ -1,4 +1,8 @@
 {
+  "language_info": {
+    "display_name": "English",
+    "native_name": "English"
+  },
   "bot_manager": {
     "title": "Discord Bot Manager",
     "status": "System Status",
