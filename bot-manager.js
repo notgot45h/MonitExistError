@@ -5,474 +5,300 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 
-class UpdateSystem {
-    constructor(botManager) {
-        this.botManager = botManager;
-        this.configFile = path.join(__dirname, 'update-config.json');
+class LocaleManager {
+    constructor() {
+        this.localesDir = path.join(__dirname, 'locales');
+        this.configFile = path.join(__dirname, 'language-config.json');
+        this.defaultLanguage = 'en';
+        this.currentLanguage = this.defaultLanguage;
+        this.locales = {};
+        this.availableLanguages = [];
         
-        this.repository = 'https://github.com/notgot45h/MonitExistError.git';
-        this.branch = 'main';
-        
-        this.defaultConfig = {
-            autoUpdate: false,
-            backupFolder: 'backups',
-            lastUpdate: null
-        };
+        this.loadAvailableLanguages();
         this.loadConfig();
+        this.loadLocale(this.currentLanguage);
+    }
 
+    loadAvailableLanguages() {
+        try {
+            if (!fs.existsSync(this.localesDir)) {
+                fs.mkdirSync(this.localesDir, { recursive: true });
+                console.log(chalk.yellow('Created locales directory'));
+            }
+            
+            const files = fs.readdirSync(this.localesDir);
+            this.availableLanguages = files
+                .filter(file => file.endsWith('.json'))
+                .map(file => file.replace('.json', ''));
+            
+            if (this.availableLanguages.length === 0) {
+                this.createDefaultLocales();
+                this.availableLanguages = ['en', 'ru'];
+            }
+            
+        } catch (error) {
+            console.log(chalk.red('Error loading available languages:'), error.message);
+            this.availableLanguages = [this.defaultLanguage];
+        }
+    }
+
+    createDefaultLocales() {
+        const defaultEn = {
+            "bot_manager": {
+                "title": "Discord Bot Manager",
+                "status": "System Status",
+                "bot": "Bot",
+                "dependencies": "Dependencies",
+                "configuration": "Configuration",
+                "nodejs": "Node.js",
+                "running": "Running",
+                "stopped": "Stopped",
+                "installed": "Installed",
+                "missing": "Missing",
+                "configured": "Configured",
+                "not_configured": "Not Configured",
+                "found_version": "Found version: {0}",
+                "current_status": "Current system status:",
+                "select_action": "Select action:",
+                "press_enter": "Press Enter to continue...",
+                "shutting_down": "Shutting down..."
+            },
+            "menu": {
+                "start_bot": "Start bot",
+                "stop_bot": "Stop bot",
+                "setup_bot": "Configure bot",
+                "install_deps": "Install dependencies",
+                "update_deps": "Update dependencies",
+                "reset_config": "Reset configuration",
+                "deploy_guild": "Deploy commands (guild)",
+                "deploy_global": "Deploy commands (global)",
+                "system_status": "System status",
+                "change_language": "Change language",
+                "exit": "Exit"
+            },
+            "messages": {
+                "bot_started": "Bot started successfully! (PID: {0})",
+                "bot_stopped": "Bot stopped!",
+                "bot_already_running": "Bot is already running!",
+                "bot_not_running": "Bot is not running!",
+                "deps_installed": "Dependencies installed successfully!",
+                "config_saved": "Configuration saved!",
+                "config_reset": "Configuration reset!",
+                "commands_deployed": "Commands deployed successfully!"
+            },
+            "errors": {
+                "failed_to_start": "Failed to start bot: {0}",
+                "failed_to_stop": "Failed to stop bot: {0}",
+                "failed_to_install": "Failed to install dependencies!",
+                "failed_to_update": "Failed to update dependencies!",
+                "failed_to_deploy": "Failed to deploy commands: {0}"
+            },
+            "prompts": {
+                "enter_token": "Enter Discord Bot Token:",
+                "token_empty": "Token cannot be empty!",
+                "enter_client_id": "Enter Bot Client ID:",
+                "enter_guild_id": "Enter Server ID:",
+                "client_id_invalid": "Client ID must contain numbers!",
+                "guild_id_invalid": "Server ID must contain numbers!",
+                "create_new_config": "Create new configuration?",
+                "continue": "Press Enter...",
+                "select_language": "Select language:"
+            },
+            "help": {
+                "title": "Discord Bot Manager - Command Help:",
+                "main_commands": "Main commands:",
+                "auto_commands": "Automatic commands:",
+                "examples": "Examples:"
+            }
+        };
+        
+        fs.writeFileSync(
+            path.join(this.localesDir, 'en.json'),
+            JSON.stringify(defaultEn, null, 2)
+        );
+        
+        const defaultRu = {
+            "bot_manager": {
+                "title": "Менеджер Discord бота",
+                "status": "Статус системы",
+                "bot": "Бот",
+                "dependencies": "Зависимости",
+                "configuration": "Конфигурация",
+                "nodejs": "Node.js",
+                "running": "Запущен",
+                "stopped": "Остановлен",
+                "installed": "Установлены",
+                "missing": "Отсутствуют",
+                "configured": "Настроено",
+                "not_configured": "Не настроено",
+                "found_version": "Найден версии: {0}",
+                "current_status": "Текущий статус системы:",
+                "select_action": "Выберите действие:",
+                "press_enter": "Нажмите Enter для продолжения...",
+                "shutting_down": "Завершение работы..."
+            },
+            "menu": {
+                "start_bot": "Запустить бота",
+                "stop_bot": "Остановить бота",
+                "setup_bot": "Настроить бота",
+                "install_deps": "Установить зависимости",
+                "update_deps": "Обновить зависимости",
+                "reset_config": "Сброс настроек",
+                "deploy_guild": "Деплой команд (гильдия)",
+                "deploy_global": "Деплой команд (глобально)",
+                "system_status": "Статус системы",
+                "change_language": "Сменить язык",
+                "exit": "Выход"
+            },
+            "messages": {
+                "bot_started": "Бот успешно запущен! (PID: {0})",
+                "bot_stopped": "Бот остановлен!",
+                "bot_already_running": "Бот уже запущен!",
+                "bot_not_running": "Бот не запущен!",
+                "deps_installed": "Зависимости успешно установлены!",
+                "config_saved": "Настройки сохранены!",
+                "config_reset": "Конфигурация сброшена!",
+                "commands_deployed": "Команды успешно отправлены!"
+            },
+            "errors": {
+                "failed_to_start": "Ошибка запуска бота: {0}",
+                "failed_to_stop": "Ошибка остановки бота: {0}",
+                "failed_to_install": "Ошибка установки зависимостей!",
+                "failed_to_update": "Ошибка обновления зависимостей!",
+                "failed_to_deploy": "Ошибка деплоя команд: {0}"
+            },
+            "prompts": {
+                "enter_token": "Введите Discord Token бота:",
+                "token_empty": "Token не может быть пустым!",
+                "enter_client_id": "Введите Client ID бота:",
+                "enter_guild_id": "Введите Server ID:",
+                "client_id_invalid": "Client ID должен содержать цифры!",
+                "guild_id_invalid": "Server ID должен содержать цифры!",
+                "create_new_config": "Создать новую конфигурацию?",
+                "continue": "Нажмите Enter...",
+                "select_language": "Выберите язык:"
+            },
+            "help": {
+                "title": "Discord Bot Manager - Справка по командам:",
+                "main_commands": "Основные команды:",
+                "auto_commands": "Автоматические команды:",
+                "examples": "Примеры:"
+            }
+        };
+        
+        fs.writeFileSync(
+            path.join(this.localesDir, 'ru.json'),
+            JSON.stringify(defaultRu, null, 2)
+        );
     }
 
     loadConfig() {
         try {
             if (fs.existsSync(this.configFile)) {
-                this.config = { ...this.defaultConfig, ...JSON.parse(fs.readFileSync(this.configFile, 'utf8')) };
+                const config = JSON.parse(fs.readFileSync(this.configFile, 'utf8'));
+                this.currentLanguage = config.language || this.defaultLanguage;
+                
+                if (!this.availableLanguages.includes(this.currentLanguage)) {
+                    this.currentLanguage = this.defaultLanguage;
+                    this.saveConfig();
+                }
             } else {
-                this.config = this.defaultConfig;
                 this.saveConfig();
             }
         } catch (error) {
-            console.log(chalk.red('Ошибка загрузки конфигурации обновлений:'), error.message);
-            this.config = this.defaultConfig;
+            console.log(chalk.yellow('Error loading language config:'), error.message);
+            this.currentLanguage = this.defaultLanguage;
         }
     }
 
     saveConfig() {
         try {
-            fs.writeFileSync(this.configFile, JSON.stringify(this.config, null, 2));
+            const config = {
+                language: this.currentLanguage,
+                lastUpdated: new Date().toISOString()
+            };
+            fs.writeFileSync(this.configFile, JSON.stringify(config, null, 2));
         } catch (error) {
-            console.log(chalk.red('Ошибка сохранения конфигурации обновлений:'), error.message);
+            console.log(chalk.red('Error saving language config:'), error.message);
         }
     }
 
-    async checkGit() {
+    loadLocale(languageCode) {
         try {
-            execSync('git --version', { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    async checkRepository() {
-        try {
-            execSync('git status', { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    async toggleAutoUpdate() {
-        this.config.autoUpdate = !this.config.autoUpdate;
-        this.saveConfig();
-        
-        const status = this.config.autoUpdate ? 'включены' : 'выключены';
-        console.log(chalk.green(`Автообновления ${status}!`));
-        
-        if (this.config.autoUpdate) {
-            console.log(chalk.blue(`Бот будет автоматически обновляться из репозитория: ${this.repository}`));
-        }
-    }
-
-    async cleanupOldBackups(maxBackups = 5) {
-        try {
-            const backupsDir = path.join(__dirname, this.config.backupFolder);
-            if (!fs.existsSync(backupsDir)) {
-                return;
-            }
-
-            const backups = fs.readdirSync(backupsDir)
-                .filter(file => file.startsWith('backup-'))
-                .map(file => {
-                    const filePath = path.join(backupsDir, file);
-                    return {
-                        name: file,
-                        path: filePath,
-                        time: fs.statSync(filePath).mtime.getTime()
-                    };
-                })
-                .sort((a, b) => b.time - a.time);
-
-            if (backups.length > maxBackups) {
-                const toDelete = backups.slice(maxBackups);
-                
-                for (const backup of toDelete) {
-                    fs.rmSync(backup.path, { recursive: true, force: true });
-                    console.log(chalk.gray(`Удален старый бэкап: ${backup.name}`));
-                }
-                
-                console.log(chalk.green(`Очищено ${toDelete.length} старых бэкапов. Оставлено: ${maxBackups}`));
-            }
-        } catch (error) {
-            console.log(chalk.yellow('Не удалось очистить старые бэкапы:'), error.message);
-        }
-    }
-
-    async getBackupsSize() {
-        try {
-            const backupsDir = path.join(__dirname, this.config.backupFolder);
-            if (!fs.existsSync(backupsDir)) {
-                return { count: 0, size: 0 };
-            }
-
-            let totalSize = 0;
-            let count = 0;
-
-            const backups = fs.readdirSync(backupsDir)
-                .filter(file => file.startsWith('backup-'));
-
-            for (const backup of backups) {
-                const backupPath = path.join(backupsDir, backup);
-                const size = this.getFolderSize(backupPath);
-                totalSize += size;
-                count++;
-            }
-
-            return { count, size: totalSize };
-        } catch (error) {
-            return { count: 0, size: 0 };
-        }
-    }
-
-    getFolderSize(folderPath) {
-        let size = 0;
-        try {
-            const items = fs.readdirSync(folderPath);
-            for (const item of items) {
-                const itemPath = path.join(folderPath, item);
-                const stat = fs.statSync(itemPath);
-                if (stat.isFile()) {
-                    size += stat.size;
-                } else if (stat.isDirectory()) {
-                    size += this.getFolderSize(itemPath);
-                }
-            }
-        } catch (error) {
-        }
-        return size;
-    }
-
-    async cleanupAllBackups() {
-        try {
-            const backupsDir = path.join(__dirname, this.config.backupFolder);
-            if (!fs.existsSync(backupsDir)) {
-                console.log(chalk.yellow('Папка бэкапов не существует!'));
-                return 0;
-            }
-
-            const backups = fs.readdirSync(backupsDir)
-                .filter(file => file.startsWith('backup-'));
-
-            let deletedCount = 0;
-            for (const backup of backups) {
-                const backupPath = path.join(backupsDir, backup);
-                fs.rmSync(backupPath, { recursive: true, force: true });
-                console.log(chalk.gray(`Удален бэкап: ${backup}`));
-                deletedCount++;
-            }
-
-            console.log(chalk.green(`Удалено всех бэкапов: ${deletedCount}`));
-            return deletedCount;
-        } catch (error) {
-            console.log(chalk.red('Ошибка удаления бэкапов:'), error.message);
-            return 0;
-        }
-    }
-
-    async createBackup() {
-        const backupDir = path.join(__dirname, this.config.backupFolder, `backup-${Date.now()}`);
-        const filesToBackup = ['.env', 'update-config.json', 'bot.pid'];
-
-        console.log(chalk.blue('Создание резервной копии...'));
-
-        try {
-            if (!fs.existsSync(backupDir)) {
-                fs.mkdirSync(backupDir, { recursive: true });
-            }
-
-            for (const file of filesToBackup) {
-                if (fs.existsSync(file)) {
-                    fs.copyFileSync(file, path.join(backupDir, file));
-                }
-            }
-
-            if (fs.existsSync('package.json')) {
-                fs.copyFileSync('package.json', path.join(backupDir, 'package.json'));
-            }
-            if (fs.existsSync('package-lock.json')) {
-                fs.copyFileSync('package-lock.json', path.join(backupDir, 'package-lock.json'));
-            }
-
-            console.log(chalk.green(`Резервная копия создана: ${backupDir}`));
+            const localeFile = path.join(this.localesDir, `${languageCode}.json`);
             
-            await this.cleanupOldBackups(1);
-            
-            return backupDir;
-        } catch (error) {
-            console.log(chalk.red('Ошибка создания резервной копии:'), error.message);
-            return null;
-        }
-    }
-
-    async restoreBackup(backupDir) {
-        console.log(chalk.blue('Восстановление из резервной копии...'));
-
-        try {
-            const files = fs.readdirSync(backupDir);
-            for (const file of files) {
-                const source = path.join(backupDir, file);
-                const destination = path.join(__dirname, file);
-                
-                if (fs.existsSync(source)) {
-                    fs.copyFileSync(source, destination);
-                    console.log(chalk.green(`Восстановлен: ${file}`));
+            if (!fs.existsSync(localeFile)) {
+                console.log(chalk.yellow(`Locale file not found: ${languageCode}.json`));
+                if (languageCode !== this.defaultLanguage) {
+                    return this.loadLocale(this.defaultLanguage);
                 }
-            }
-            return true;
-        } catch (error) {
-            console.log(chalk.red('Ошибка восстановления:'), error.message);
-            return false;
-        }
-    }
-
-    async checkForUpdates() {
-    if (!await this.checkRepository()) {
-        console.log(chalk.yellow('Папка не является Git репозиторием'));
-        return false;
-    }
-
-    try {
-        console.log(chalk.blue('Проверка обновлений...'));
-        
-        await this.runCommand('git fetch', 'Получение информации об обновлениях...');
-        
-        const status = execSync('git status -s --porcelain').toString();
-        
-        const ignoredFiles = ['update-config.json', '.env', 'bot.pid'];
-        const relevantChanges = status.split('\n')
-            .filter(line => line.trim())
-            .filter(line => {
-                const fileName = line.substring(3).trim();
-                return !ignoredFiles.some(ignored => fileName.includes(ignored));
-            });
-
-        if (relevantChanges.length === 0) {
-            console.log(chalk.green('Бот обновлен до последней версии!'));
-            return false;
-        } else {
-            console.log(chalk.yellow('Доступно обновление!'));
-            console.log(chalk.gray('Изменения:'));
-            relevantChanges.forEach(change => console.log(chalk.gray(`  ${change}`)));
-            return true;
-        }
-    } catch (error) {
-        console.log(chalk.red('Ошибка проверки обновлений:'), error.message);
-        return false;
-    }
-    }
-
-    async runUpdate() {
-        console.log(chalk.cyan('\nЗапуск процесса обновления...'));
-        console.log(chalk.blue(`Репозиторий: ${this.repository}`));
-        console.log(chalk.blue(`Ветка: ${this.branch}`));
-
-        const tempBackupDir = path.join(__dirname, 'temp_update_backup');
-        try {
-            if (!fs.existsSync(tempBackupDir)) {
-                fs.mkdirSync(tempBackupDir, { recursive: true });
-            }
-            const criticalFiles = ['bot-manager.js', 'package.json'];
-            for (const file of criticalFiles) {
-                if (fs.existsSync(file)) {
-                    fs.copyFileSync(file, path.join(tempBackupDir, file));
-                }
-            }
-            
-        } catch (error) {
-            console.log(chalk.yellow('Не удалось создать временный бэкап критических файлов'));
-        }
-
-        if (!await this.checkGit()) {
-            console.log(chalk.red('Git не установлен на системе!'));
-            console.log(chalk.yellow('Скачайте Git с: https://github.com/notgot45h/MonitExistError'));
-            return false;
-        }
-
-        if (!await this.checkRepository()) {
-            console.log(chalk.yellow('Папка не является Git репозиторием! Инициализируем...'));
-            const success = await this.initRepository();
-            if (!success) {
-                console.log(chalk.red('Не удалось инициализировать репозиторий!'));
                 return false;
             }
-        }
-
-        const backupDir = await this.createBackup();
-        if (!backupDir) {
-            console.log(chalk.red('Не удалось создать резервную копию! Прерывание обновления.'));
-            return false;
-        }
-
-        const wasBotRunning = this.botManager.isBotRunning;
-
-        try {
-            if (wasBotRunning) {
-                console.log(chalk.yellow('Останавливаем бота для обновления...'));
-                await this.botManager.stopBot();
-            }
             
-            console.log(chalk.blue('Получение обновлений...'));
-            await this.runCommand('git fetch origin', 'Загрузка изменений...');
+            const localeData = JSON.parse(fs.readFileSync(localeFile, 'utf8'));
+            this.locales[languageCode] = localeData;
+            this.currentLanguage = languageCode;
             
-            console.log(chalk.blue('Проверка изменений...'));
-            const changes = await this.getUpdateChanges();
-            console.log(chalk.blue(`Будут обновлены файлы: ${changes.files.length}`));
-
-            await this.runCommand('git reset --hard origin/' + this.branch, 'Применение обновлений...');
-
-            await this.runCommand('git clean -fd', 'Очистка старых файлов...');
-
-            await this.restoreBackup(backupDir);
-
-            console.log(chalk.blue('Установка обновленных зависимостей...'));
-            await this.botManager.installDependencies();
-
-            this.config.lastUpdate = new Date().toISOString();
-            this.saveConfig();
-
-            console.log(chalk.green('Обновление успешно завершено!'));
-
-            try {
-                if (fs.existsSync(tempBackupDir)) {
-                    fs.rmSync(tempBackupDir, { recursive: true, force: true });
-                }
-            } catch (e) {
-            }
-
-            if (wasBotRunning) {
-                console.log(chalk.yellow('Перезапуск бота...'));
-                await this.botManager.startBot();
-            }
-
-            return true;
-
-        } catch (error) {
-            console.log(chalk.red('Ошибка во время обновления:'), error.message);
-            
-            try {
-                console.log(chalk.yellow('Попытка восстановления из временного бэкапа...'));
-                if (fs.existsSync(tempBackupDir)) {
-                    const files = fs.readdirSync(tempBackupDir);
-                    for (const file of files) {
-                        const source = path.join(tempBackupDir, file);
-                        const destination = path.join(__dirname, file);
-                        if (fs.existsSync(source)) {
-                            fs.copyFileSync(source, destination);
-                            console.log(chalk.green(`Восстановлен: ${file}`));
-                        }
-                    }
-                }
-            } catch (restoreError) {
-                console.log(chalk.red('Не удалось восстановить из временного бэкапа:'), restoreError.message);
-            }
-            
-            console.log(chalk.yellow('Восстановление из резервной копии...'));
-            await this.restoreBackup(backupDir);
-            
-            if (wasBotRunning) {
-                console.log(chalk.yellow('Возобновление работы бота...'));
-                await this.botManager.startBot();
-            }
-            
-            return false;
-        }
-    }
-
-    async getUpdateChanges() {
-        try {
-            const result = await this.runCommand('git diff --name-only HEAD..origin/' + this.branch, '', true);
-            const files = result.stdout.split('\n').filter(line => line.trim() !== '');
-            return { files };
-        } catch (error) {
-            return { files: [] };
-        }
-    }
-
-    async initRepository() {
-        try {
-            console.log(chalk.blue('Инициализация Git репозитория...'));
-            
-            await this.runCommand('git init', 'Инициализация...');
-            await this.runCommand(`git remote add origin ${this.repository}`, 'Добавление удаленного репозитория...');
-            await this.runCommand('git fetch', 'Получение данных...');
-            await this.runCommand(`git checkout -b ${this.branch}`, 'Создание ветки...');
-            await this.runCommand(`git branch --set-upstream-to=origin/${this.branch} ${this.branch}`, 'Настройка отслеживания...');
-
-            console.log(chalk.green('Репо успешно инициализирован!'));
             return true;
         } catch (error) {
-            console.log(chalk.red('Ошибка инициализации репозитория:'), error.message);
+            console.log(chalk.red(`Error loading locale ${languageCode}:`), error.message);
+            if (languageCode !== this.defaultLanguage) {
+                return this.loadLocale(this.defaultLanguage);
+            }
             return false;
         }
     }
 
-    async showUpdateStatus() {
-        console.log(chalk.cyan('\nСтатус системы обновлений\n'));
-
-        const gitStatus = await this.checkGit() ? chalk.green('Установлен') : chalk.red('Отсутствует');
-        const repoStatus = await this.checkRepository() ? chalk.green('Настроен') : chalk.red('Не настроен');
-        const autoUpdateStatus = this.config.autoUpdate ? chalk.green('Включена') : chalk.yellow('Выключена');
-        const lastUpdate = this.config.lastUpdate ? 
-            new Date(this.config.lastUpdate).toLocaleString() : chalk.yellow('Никогда');
-
-        const backupsInfo = await this.getBackupsSize();
-        const backupsStatus = backupsInfo.count > 0 ? 
-            chalk.blue(`${backupsInfo.count} бэкапов (${(backupsInfo.size / 1024 / 1024).toFixed(2)} МБ)`) : 
-            chalk.gray('Нет бэкапов');
-
-        console.log(chalk.white('┌──────────────────────────'));
-        console.log(chalk.white(`│ Git                       ${gitStatus}`));
-        console.log(chalk.white(`│ Репозиторий               ${repoStatus}`));
-        console.log(chalk.white(`│ Автообновления            ${autoUpdateStatus}`));
-        console.log(chalk.white(`│ Последнее обновление      ${lastUpdate}`));
-        console.log(chalk.white(`│ Ветка                     ${this.branch}`));
-        console.log(chalk.white(`│ Бэкапы                    ${backupsStatus}`));
-        console.log(chalk.white('└──────────────────────────'));
-
-        console.log(chalk.blue(`\nРепозиторий: ${this.repository}`));
-
-        if (await this.checkRepository()) {
-            const hasUpdates = await this.checkForUpdates();
-            if (hasUpdates) {
-                console.log(chalk.yellow('\nДоступны обновления! Используйте "Обновить бота из Git"'));
+    get(key, ...placeholders) {
+        try {
+            const keys = key.split('.');
+            let value = this.locales[this.currentLanguage];
+            
+            for (const k of keys) {
+                if (value && value[k] !== undefined) {
+                    value = value[k];
+                } else {
+                    return key;
+                }
             }
+            
+            if (typeof value === 'string' && placeholders.length > 0) {
+                return value.replace(/{(\d+)}/g, (match, index) => {
+                    return placeholders[index] !== undefined ? placeholders[index] : match;
+                });
+            }
+            
+            return value || key;
+        } catch (error) {
+            return key;
         }
     }
 
-    runCommand(command, message = '', silent = false) {
-        return new Promise((resolve, reject) => {
-            if (message && !silent) console.log(chalk.blue(message));
-            
-            const child = require('child_process').exec(command, (error, stdout, stderr) => {
-                if (error) {
-                    if (!silent) {
-                        if (!message.includes('Очистка')) {
-                            console.log(chalk.red(`Ошибка: ${error.message}`));
-                        }
-                    }
-                    reject(error);
-                    return;
-                }
-                
-                if (stdout && !silent && !stdout.includes('Already up to date')) {
-                    console.log(chalk.gray(stdout));
-                }
-                if (stderr && !silent && !stderr.includes('warning:')) {
-                    console.log(chalk.yellow(stderr));
-                }
-                
-                resolve({ stdout, stderr });
-            });
+    setLanguage(languageCode) {
+        if (this.availableLanguages.includes(languageCode)) {
+            if (this.loadLocale(languageCode)) {
+                this.currentLanguage = languageCode;
+                this.saveConfig();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    getLanguageList() {
+        return this.availableLanguages.map(lang => ({
+            name: lang.toUpperCase(),
+            value: lang
+        }));
+    }
+
+    getCurrentLanguage() {
+        return this.currentLanguage;
+    }
+
+    formatString(str, ...args) {
+        return str.replace(/{(\d+)}/g, (match, index) => {
+            return args[index] !== undefined ? args[index] : match;
         });
     }
 }
@@ -483,7 +309,7 @@ class BotManager {
         this.botProcess = null;
         this.pidFile = path.join(__dirname, 'bot.pid');
         this.envFile = path.join(__dirname, '.env');
-        this.updateSystem = new UpdateSystem(this);
+        this.locale = new LocaleManager();
         
         this.handleCommandLineArgs();
     }
@@ -499,7 +325,7 @@ class BotManager {
     }
 
     async executeCommandLineArgs(args) {
-        console.log(chalk.blue('Discord Bot Manager - Автоматический режим\n'));
+        console.log(chalk.blue('Discord Bot Manager - Automatic Mode\n'));
         
         for (const arg of args) {
             switch (arg) {
@@ -532,14 +358,9 @@ class BotManager {
                 case '--status':
                     await this.showDetailedStatus();
                     break;
-                case '--update-bot':
-                    await this.updateSystem.runUpdate();
-                    break;
-                case '--check-updates':
-                    await this.updateSystem.checkForUpdates();
-                    break;
-                case '--clean-backups':
-                    await this.updateSystem.cleanupAllBackups();
+                case '--change-language':
+                case '-l':
+                    await this.changeLanguage();
                     break;
                 case '--menu':
                     await this.showMainMenu();
@@ -549,39 +370,35 @@ class BotManager {
                     this.showHelp();
                     break;
                 default:
-                    console.log(chalk.yellow(`Неизвестный аргумент: ${arg}`));
+                    console.log(chalk.yellow(`Unknown argument: ${arg}`));
                     this.showHelp();
             }
         }
     }
 
     showHelp() {
-        console.log(chalk.cyan(`
-Discord Bot Manager - Справка по командам:
-
-Основные команды:
-  ${chalk.green('npm start')}              - Интерактивное меню
-  ${chalk.green('node bot-manager.js --menu')}    - Интерактивное меню
-
-Автоматические команды:
-  ${chalk.green('--install, -i')}          - Установка зависимостей
-  ${chalk.green('--setup, -s')}            - Настройка конфигурации
-  ${chalk.green('--start')}                - Запуск бота
-  ${chalk.green('--stop')}                 - Остановка бота
-  ${chalk.green('--deploy-guild')}         - Деплой команд для гильдии
-  ${chalk.green('--deploy-global')}        - Глобальный деплой команд
-  ${chalk.green('--update')}               - Обновление зависимостей
-  ${chalk.green('--reset')}                - Сброс конфигурации
-  ${chalk.green('--status')}               - Детальный статус системы
-  ${chalk.green('--update-bot')}           - Обновить бота из Git
-  ${chalk.green('--check-updates')}        - Проверить обновления
-  ${chalk.green('--clean-backups')}        - Очистить все бэкапы
-  ${chalk.green('--help, -h')}             - Эта справка
-
-Примеры:
-  ${chalk.cyan('node bot-manager.js --install --setup --start')}
-  ${chalk.cyan('npm start')}
-        `));
+        console.log(chalk.cyan(this.locale.get('help.title') + '\n'));
+        
+        console.log(this.locale.get('help.main_commands') + ':');
+        console.log(chalk.green('  npm start') + '              - ' + 'Interactive menu');
+        console.log(chalk.green('  node bot-manager.js --menu') + '    - ' + 'Interactive menu\n');
+        
+        console.log(this.locale.get('help.auto_commands') + ':');
+        console.log(chalk.green('  --install, -i') + '          - ' + 'Install dependencies');
+        console.log(chalk.green('  --setup, -s') + '            - ' + 'Configure bot');
+        console.log(chalk.green('  --start') + '                - ' + 'Start bot');
+        console.log(chalk.green('  --stop') + '                 - ' + 'Stop bot');
+        console.log(chalk.green('  --deploy-guild') + '         - ' + 'Deploy guild commands');
+        console.log(chalk.green('  --deploy-global') + '        - ' + 'Deploy global commands');
+        console.log(chalk.green('  --update') + '               - ' + 'Update dependencies');
+        console.log(chalk.green('  --reset') + '                - ' + 'Reset configuration');
+        console.log(chalk.green('  --status') + '               - ' + 'System status');
+        console.log(chalk.green('  --change-language, -l') + '   - ' + 'Change interface language');
+        console.log(chalk.green('  --help, -h') + '             - ' + 'This help\n');
+        
+        console.log(this.locale.get('help.examples') + ':');
+        console.log(chalk.cyan('  node bot-manager.js --install --setup --start'));
+        console.log(chalk.cyan('  npm start'));
         process.exit(0);
     }
 
@@ -589,38 +406,28 @@ Discord Bot Manager - Справка по командам:
         console.clear();
         await this.checkSystemStatus();
         
-        if (this.updateSystem.config.autoUpdate) {
-            const hasUpdates = await this.updateSystem.checkForUpdates();
-            if (hasUpdates) {
-                console.log(chalk.yellow('\nДоступны обновления! Используйте "Обновить бота"'));
-            }
-        }
-        
         const { action } = await inquirer.prompt({
             type: 'list',
             name: 'action',
-            message: 'Выберите действие:',
+            message: this.locale.get('bot_manager.select_action'),
             choices: [
-                { name: 'Запустить бота', value: 'start' },
-                { name: 'Остановить бота', value: 'stop' },
+                { name: this.locale.get('menu.start_bot'), value: 'start' },
+                { name: this.locale.get('menu.stop_bot'), value: 'stop' },
                 new inquirer.Separator(),
-                { name: 'Обновить бота из Git', value: 'update-bot' },
-                { name: 'Включить/выключить автообновления', value: 'toggle-auto-update' },
-                { name: 'Статус обновлений', value: 'update-status' },
-                { name: 'Очистить все бэкапы', value: 'clean-backups' },
+                { name: this.locale.get('menu.change_language'), value: 'change-language' },
                 new inquirer.Separator(),
-                { name: 'Настроить бота', value: 'setup' },
-                { name: 'Установить зависимости', value: 'install' },
-                { name: 'Обновить зависимости', value: 'update' },
-                { name: 'Сброс настроек', value: 'reset' },
+                { name: this.locale.get('menu.setup_bot'), value: 'setup' },
+                { name: this.locale.get('menu.install_deps'), value: 'install' },
+                { name: this.locale.get('menu.update_deps'), value: 'update' },
+                { name: this.locale.get('menu.reset_config'), value: 'reset' },
                 new inquirer.Separator(),
-                { name: 'Деплой команд (гильдия)', value: 'deploy-guild' },
-                { name: 'Деплой команд (глобально)', value: 'deploy-global' },
+                { name: this.locale.get('menu.deploy_guild'), value: 'deploy-guild' },
+                { name: this.locale.get('menu.deploy_global'), value: 'deploy-global' },
                 new inquirer.Separator(),
-                { name: 'Статус системы', value: 'status' },
-                { name: 'Выход', value: 'exit' }
+                { name: this.locale.get('menu.system_status'), value: 'status' },
+                { name: this.locale.get('menu.exit'), value: 'exit' }
             ],
-            pageSize: 19
+            pageSize: 15
         });
 
         await this.handleAction(action);
@@ -630,38 +437,56 @@ Discord Bot Manager - Справка по командам:
         this.isBotRunning = await this.checkBotProcess();
         const systemStatus = await this.getSystemStatus();
         
-        console.log(chalk.blue('Текущий статус системы:'));
-        console.log(chalk.white(`┌──────────────────`));
-        console.log(chalk.white(`│ Бот               ${systemStatus.bot}`));
-        console.log(chalk.white(`│ Зависимости       ${systemStatus.dependencies}`));
-        console.log(chalk.white(`│ Конфигурация      ${systemStatus.config}`));
-        console.log(chalk.white(`│ Node.js           ${systemStatus.node}`));
-        console.log(chalk.white(`│ Git обновления    ${systemStatus.git}`));
-        console.log(chalk.white(`└──────────────────\n`));
+        console.log(chalk.blue(this.locale.get('bot_manager.current_status')));
+        console.log(chalk.white('┌──────────────────'));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}               {1}',
+            this.locale.get('bot_manager.bot'),
+            systemStatus.bot
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}       {1}',
+            this.locale.get('bot_manager.dependencies'),
+            systemStatus.dependencies
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}      {1}',
+            this.locale.get('bot_manager.configuration'),
+            systemStatus.config
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}           {1}',
+            this.locale.get('bot_manager.nodejs'),
+            systemStatus.node
+        )));
+        console.log(chalk.white('└──────────────────\n'));
     }
 
     async getSystemStatus() {
         const botStatus = this.isBotRunning ? 
-            chalk.green('Запущен') : chalk.red('Остановлен');
+            chalk.green(this.locale.get('bot_manager.running')) : 
+            chalk.red(this.locale.get('bot_manager.stopped'));
         
         const depsStatus = fs.existsSync('node_modules') ? 
-            chalk.green('Установлены') : chalk.red('Отсутствуют');
+            chalk.green(this.locale.get('bot_manager.installed')) : 
+            chalk.red(this.locale.get('bot_manager.missing'));
         
         const configStatus = await this.validateConfig() ? 
-            chalk.green('Настроено') : chalk.red('Не настроено');
+            chalk.green(this.locale.get('bot_manager.configured')) : 
+            chalk.red(this.locale.get('bot_manager.not_configured'));
         
         const nodeStatus = await this.checkNodeJS() ? 
-            chalk.green('Найден версии: ' + process.version) : chalk.red('Не найден');
-
-        const gitStatus = await this.updateSystem.checkGit() ? 
-            chalk.green('Доступен') : chalk.yellow('Не установлен');
+            chalk.green(this.locale.formatString(
+                this.locale.get('bot_manager.found_version'),
+                process.version
+            )) : 
+            chalk.red(this.locale.get('bot_manager.not_installed'));
 
         return { 
             bot: botStatus, 
             dependencies: depsStatus, 
             config: configStatus, 
-            node: nodeStatus,
-            git: gitStatus
+            node: nodeStatus
         };
     }
 
@@ -673,17 +498,8 @@ Discord Bot Manager - Справка по командам:
             case 'stop':
                 await this.stopBot();
                 break;
-            case 'update-bot':
-                await this.updateSystem.runUpdate();
-                break;
-            case 'toggle-auto-update':
-                await this.updateSystem.toggleAutoUpdate();
-                break;
-            case 'update-status':
-                await this.updateSystem.showUpdateStatus();
-                break;
-            case 'clean-backups':
-                await this.updateSystem.cleanupAllBackups();
+            case 'change-language':
+                await this.changeLanguage();
                 break;
             case 'setup':
                 await this.setupConfiguration();
@@ -713,6 +529,24 @@ Discord Bot Manager - Справка по командам:
         
         if (action !== 'exit') {
             await this.waitForEnter();
+        }
+    }
+
+    async changeLanguage() {
+        const languageChoices = this.locale.getLanguageList();
+        
+        const { selectedLanguage } = await inquirer.prompt({
+            type: 'list',
+            name: 'selectedLanguage',
+            message: this.locale.get('prompts.select_language'),
+            choices: languageChoices
+        });
+        
+        if (this.locale.setLanguage(selectedLanguage)) {
+            console.log(chalk.green(`Language changed to: ${selectedLanguage.toUpperCase()}`));
+            console.log(chalk.blue('Interface language has been updated.'));
+        } else {
+            console.log(chalk.red('Failed to change language'));
         }
     }
 
@@ -773,13 +607,13 @@ Discord Bot Manager - Справка по командам:
         }
     }
 
-    async runCommand(command, message = 'Выполнение команды...') {
+    async runCommand(command, message = 'Executing command...') {
         return new Promise((resolve, reject) => {
             if (message) console.log(chalk.blue(`${message}`));
             
             const child = exec(command, (error, stdout, stderr) => {
                 if (error) {
-                    console.log(chalk.red(`Ошибка: ${error.message}`));
+                    console.log(chalk.red(`Error: ${error.message}`));
                     reject(error);
                     return;
                 }
@@ -792,35 +626,34 @@ Discord Bot Manager - Справка по командам:
         });
     }
 
-
     async installDependencies() {
-        console.log(chalk.cyan('\nУстановка зависимостей...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.install_deps') + '...'));
         
         if (!await this.checkNodeJS()) {
-            console.log(chalk.red('Node.js не установлен!'));
-            console.log(chalk.yellow('Скачайте с: https://nodejs.org/'));
+            console.log(chalk.red('Node.js is not installed!'));
+            console.log(chalk.yellow('Download from: https://nodejs.org/'));
             return false;
         }
 
         if (!await this.checkNPM()) {
-            console.log(chalk.red('npm не найден!'));
-            console.log(chalk.yellow('Переустановите Node.js'));
+            console.log(chalk.red('npm not found!'));
+            console.log(chalk.yellow('Reinstall Node.js'));
             return false;
         }
 
         try {
-            await this.runCommand('npm cache clean --force', 'Очистка кэша npm...');
+            await this.runCommand('npm cache clean --force', 'Cleaning npm cache...');
             
-            await this.runCommand('npm install --no-fund --no-audit', 'Установка зависимостей...');
+            await this.runCommand('npm install --no-fund --no-audit', 'Installing dependencies...');
 
             if (!fs.existsSync(this.envFile)) {
                 await this.createDefaultEnv();
             }
 
-            console.log(chalk.green('Зависимости успешно установлены!'));
+            console.log(chalk.green(this.locale.get('messages.deps_installed')));
             return true;
         } catch (error) {
-            console.log(chalk.red('Ошибка установки зависимостей!'));
+            console.log(chalk.red(this.locale.get('errors.failed_to_install')));
             return false;
         }
     }
@@ -831,83 +664,83 @@ CLIENT_ID=your_client_id_here
 GUILD_ID=your_guild_id_here`;
 
         fs.writeFileSync(this.envFile, defaultEnv);
-        console.log(chalk.yellow('Создан файл .env с настройками по умолчанию'));
+        console.log(chalk.yellow('Created .env file with default settings'));
     }
 
     async setupConfiguration() {
-    console.log(chalk.cyan('\nНастройка конфигурации бота...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.setup_bot') + '...'));
 
-    console.log(chalk.yellow('Внимание: Токен будет отображаться при вводе для проверки правильности.'));
-    console.log(chalk.yellow('Убедитесь, что никто не видит ваш экран!\n'));
+        console.log(chalk.yellow('Warning: Token will be displayed during input for verification.'));
+        console.log(chalk.yellow('Make sure no one can see your screen!\n'));
 
-    const questions = [
-        {
-            type: 'input',
-            name: 'token',
-            message: 'Введите Discord Token бота:',
-            validate: input => {
-                if (!input) return 'Token не может быть пустым!';
-                if (input.includes('your_bot_token_here')) return 'Замените ваш_bot_token_here на реальный токен!';
-                return true;
+        const questions = [
+            {
+                type: 'input',
+                name: 'token',
+                message: this.locale.get('prompts.enter_token'),
+                validate: input => {
+                    if (!input) return this.locale.get('prompts.token_empty');
+                    if (input.includes('your_bot_token_here')) return 'Replace your_bot_token_here with real token!';
+                    return true;
+                }
+            },
+            {
+                type: 'input',
+                name: 'clientId',
+                message: this.locale.get('prompts.enter_client_id'),
+                validate: input => {
+                    const cleanId = input.replace(/\D/g, '');
+                    return cleanId.length > 0 ? true : this.locale.get('prompts.client_id_invalid');
+                }
+            },
+            {
+                type: 'input',
+                name: 'guildId',
+                message: this.locale.get('prompts.enter_guild_id'),
+                validate: input => {
+                    const cleanId = input.replace(/\D/g, '');
+                    return cleanId.length > 0 ? true : this.locale.get('prompts.guild_id_invalid');
+                }
             }
-        },
-        {
-            type: 'input',
-            name: 'clientId',
-            message: 'Введите Client ID бота:',
-            validate: input => {
-                const cleanId = input.replace(/\D/g, '');
-                return cleanId.length > 0 ? true : 'Client ID должен содержать цифры!';
-            }
-        },
-        {
-            type: 'input',
-            name: 'guildId',
-            message: 'Введите Server ID:',
-            validate: input => {
-                const cleanId = input.replace(/\D/g, '');
-                return cleanId.length > 0 ? true : 'Server ID должен содержать цифры!';
-            }
-        }
-    ];
+        ];
 
-    const answers = await inquirer.prompt(questions);
+        const answers = await inquirer.prompt(questions);
 
-    const cleanClientId = answers.clientId.replace(/\D/g, '');
-    const cleanGuildId = answers.guildId.replace(/\D/g, '');
+        const cleanClientId = answers.clientId.replace(/\D/g, '');
+        const cleanGuildId = answers.guildId.replace(/\D/g, '');
 
-    const envContent = `DISCORD_TOKEN=${answers.token}
+        const envContent = `DISCORD_TOKEN=${answers.token}
 CLIENT_ID=${cleanClientId}
 GUILD_ID=${cleanGuildId}`;
 
-    fs.writeFileSync(this.envFile, envContent);
+        fs.writeFileSync(this.envFile, envContent);
 
-    console.log(chalk.green('\nНастройки сохранены!'));
-    console.log(chalk.blue(`Bot ID: ${cleanClientId}`));
-    console.log(chalk.blue(`Server ID: ${cleanGuildId}`));
-    console.log(chalk.green(`Token: ${answers.token.substring(0, 10)}...`));
-    console.log(chalk.yellow('\nУбедитесь, что файл .env защищен и не попадает в публичные репозитории!'));
-}
+        console.log(chalk.green('\n' + this.locale.get('messages.config_saved')));
+        console.log(chalk.blue(`Bot ID: ${cleanClientId}`));
+        console.log(chalk.blue(`Server ID: ${cleanGuildId}`));
+        console.log(chalk.green(`Token: ${answers.token.substring(0, 10)}...`));
+        console.log(chalk.yellow('\nMake sure the .env file is protected and not uploaded to public repositories!'));
+    }
 
     async startBot() {
-        console.log(chalk.cyan('\nЗапуск бота...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.start_bot') + '...'));
 
         if (!fs.existsSync('node_modules')) {
-            console.log(chalk.yellow('Зависимости не установлены. Устанавливаю...'));
+            console.log(chalk.yellow('Dependencies not installed. Installing...'));
             const installed = await this.installDependencies();
             if (!installed) {
-                console.log(chalk.red('Не удалось установить зависимости!'));
+                console.log(chalk.red(this.locale.get('errors.failed_to_install')));
                 return;
             }
         }
 
         if (!await this.validateConfig()) {
-            console.log(chalk.yellow('Конфигурация не заполнена. Запускаю настройку...'));
+            console.log(chalk.yellow('Configuration not filled. Starting setup...'));
             await this.setupConfiguration();
         }
 
         if (await this.checkBotProcess()) {
-            console.log(chalk.yellow('Бот уже запущен!'));
+            console.log(chalk.yellow(this.locale.get('messages.bot_already_running')));
             return;
         }
 
@@ -922,19 +755,25 @@ GUILD_ID=${cleanGuildId}`;
             this.botProcess.unref();
             this.isBotRunning = true;
 
-            console.log(chalk.green(`Бот успешно запущен! (PID: ${this.botProcess.pid})`));
-            console.log(chalk.blue('Для остановки используйте команду "Остановить бота"'));
+            console.log(chalk.green(this.locale.formatString(
+                this.locale.get('messages.bot_started'),
+                this.botProcess.pid
+            )));
+            console.log(chalk.blue('Use "Stop bot" to stop the bot'));
             
         } catch (error) {
-            console.log(chalk.red(`Ошибка запуска бота: ${error.message}`));
+            console.log(chalk.red(this.locale.formatString(
+                this.locale.get('errors.failed_to_start'),
+                error.message
+            )));
         }
     }
 
     async stopBot() {
-        console.log(chalk.cyan('\nОстановка бота...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.stop_bot') + '...'));
 
         if (!await this.checkBotProcess()) {
-            console.log(chalk.yellow('Бот не запущен!'));
+            console.log(chalk.yellow(this.locale.get('messages.bot_not_running')));
             return;
         }
 
@@ -952,10 +791,13 @@ GUILD_ID=${cleanGuildId}`;
             }
             
             this.isBotRunning = false;
-            console.log(chalk.green('Бот остановлен!'));
+            console.log(chalk.green(this.locale.get('messages.bot_stopped')));
             
         } catch (error) {
-            console.log(chalk.red(`Ошибка остановки бота: ${error.message}`));
+            console.log(chalk.red(this.locale.formatString(
+                this.locale.get('errors.failed_to_stop'),
+                error.message
+            )));
             
             if (fs.existsSync(this.pidFile)) {
                 fs.unlinkSync(this.pidFile);
@@ -964,79 +806,97 @@ GUILD_ID=${cleanGuildId}`;
     }
 
     async deployCommands(type) {
-        console.log(chalk.cyan(`\nДеплой ${type === 'guild' ? 'гильдийских' : 'глобальных'} команд...`));
+        console.log(chalk.cyan('\n' + this.locale.get(type === 'guild' ? 'menu.deploy_guild' : 'menu.deploy_global') + '...'));
 
         if (!await this.validateConfig()) {
-            console.log(chalk.red('Конфигурация не заполнена!'));
-            console.log(chalk.yellow('Сначала настройте бота.'));
+            console.log(chalk.red('Configuration not filled!'));
+            console.log(chalk.yellow('First configure the bot.'));
             return;
         }
 
         const scriptName = type === 'guild' ? 'deploy-commands-guild.js' : 'deploy-commands-global.js';
         const message = type === 'guild' ? 
-            'Команды появятся мгновенно!' : 
-            'Команды появятся в течение 24 часов';
+            'Commands appear instantly!' : 
+            'Commands appear within 24 hours';
 
         console.log(chalk.yellow(`${message}`));
 
         try {
-            await this.runCommand(`node ${scriptName}`, 'Отправка команд Discord...');
-            console.log(chalk.green(`${type === 'guild' ? 'Гильдийские' : 'Глобальные'} команды успешно отправлены!`));
+            await this.runCommand(`node ${scriptName}`, 'Sending commands to Discord...');
+            console.log(chalk.green(this.locale.get('messages.commands_deployed')));
         } catch (error) {
-            console.log(chalk.red(`Ошибка деплоя команд: ${error.message}`));
+            console.log(chalk.red(this.locale.formatString(
+                this.locale.get('errors.failed_to_deploy'),
+                error.message
+            )));
         }
     }
 
     async updateDependencies() {
-        console.log(chalk.cyan('\nОбновление зависимостей...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.update_deps') + '...'));
         
         try {
-            await this.runCommand('npm update --no-fund --no-audit', 'Обновление пакетов...');
-            console.log(chalk.green('Зависимости успешно обновлены!'));
+            await this.runCommand('npm update --no-fund --no-audit', 'Updating packages...');
+            console.log(chalk.green(this.locale.get('messages.deps_installed')));
         } catch (error) {
-            console.log(chalk.red('Ошибка обновления зависимостей!'));
+            console.log(chalk.red(this.locale.get('errors.failed_to_update')));
         }
     }
 
     async resetConfiguration() {
-        console.log(chalk.cyan('\nСброс конфигурации...'));
+        console.log(chalk.cyan('\n' + this.locale.get('menu.reset_config') + '...'));
 
         if (fs.existsSync(this.envFile)) {
             fs.unlinkSync(this.envFile);
-            console.log(chalk.green('Файл .env удален!'));
+            console.log(chalk.green('.env file deleted!'));
         } else {
-            console.log(chalk.yellow('Файл .env не найден.'));
+            console.log(chalk.yellow('.env file not found.'));
         }
 
         const { createNew } = await inquirer.prompt({
             type: 'confirm',
             name: 'createNew',
-            message: 'Создать новую конфигурацию?',
+            message: this.locale.get('prompts.create_new_config'),
             default: true
         });
 
         if (createNew) {
             await this.setupConfiguration();
         } else {
-            console.log(chalk.blue('Вы можете создать конфигурацию позже командой "Настроить бота"'));
+            console.log(chalk.blue('You can create configuration later with "Configure bot" command'));
         }
     }
 
     async showDetailedStatus() {
         console.clear();
-        console.log(chalk.cyan.bold('\nДетальный статус системы\n'));
+        console.log(chalk.cyan.bold('\n' + this.locale.get('menu.system_status') + '\n'));
 
         const status = await this.getSystemStatus();
         
         console.log(chalk.white('┌──────────────────'));
-        console.log(chalk.white(`│ Бот               ${status.bot}`));
-        console.log(chalk.white(`│ Зависимости       ${status.dependencies}`));
-        console.log(chalk.white(`│ Конфигурация      ${status.config}`));
-        console.log(chalk.white(`│ Node.js           ${status.node}`));
-        console.log(chalk.white(`│ Git обновления    ${status.git}`));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}               {1}',
+            this.locale.get('bot_manager.bot'),
+            status.bot
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}       {1}',
+            this.locale.get('bot_manager.dependencies'),
+            status.dependencies
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}      {1}',
+            this.locale.get('bot_manager.configuration'),
+            status.config
+        )));
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}           {1}',
+            this.locale.get('bot_manager.nodejs'),
+            status.node
+        )));
         console.log(chalk.white('└──────────────────'));
 
-        console.log(chalk.cyan('\nДетали конфигурации:'));
+        console.log(chalk.cyan('\nConfiguration details:'));
         if (await this.validateConfig()) {
             try {
                 const envContent = fs.readFileSync(this.envFile, 'utf8');
@@ -1055,15 +915,17 @@ GUILD_ID=${cleanGuildId}`;
                     }
                 });
             } catch (e) {
-                console.log(chalk.red('Не удалось прочитать .env файл'));
+                console.log(chalk.red('Failed to read .env file'));
             }
         } else {
-            console.log(chalk.red('Конфигурация не заполнена'));
+            console.log(chalk.red('Configuration not filled'));
         }
 
-        await this.updateSystem.showUpdateStatus();
+        console.log(chalk.cyan('\nLanguage settings:'));
+        console.log(chalk.blue(`Current language: ${this.locale.getCurrentLanguage().toUpperCase()}`));
+        console.log(chalk.blue(`Available languages: ${this.locale.availableLanguages.join(', ')}`));
 
-        console.log(chalk.cyan('\nДоступные команды:'));
+        console.log(chalk.cyan('\nAvailable commands:'));
         if (fs.existsSync('commands')) {
             let totalCommands = 0;
             const commandFolders = fs.readdirSync('commands');
@@ -1073,31 +935,31 @@ GUILD_ID=${cleanGuildId}`;
                 if (fs.statSync(folderPath).isDirectory()) {
                     const commands = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
                     totalCommands += commands.length;
-                    console.log(chalk.blue(`${folder}: ${commands.length} команд`));
+                    console.log(chalk.blue(`${folder}: ${commands.length} commands`));
                 }
             });
             
-            console.log(chalk.green(`Всего команд: ${totalCommands}`));
+            console.log(chalk.green(`Total commands: ${totalCommands}`));
         } else {
-            console.log(chalk.red('Папка commands не найдена'));
+            console.log(chalk.red('Commands folder not found'));
         }
 
         if (this.isBotRunning && fs.existsSync(this.pidFile)) {
             const pid = fs.readFileSync(this.pidFile, 'utf8');
-            console.log(chalk.cyan('\nИнформация о процессе:'));
+            console.log(chalk.cyan('\nProcess information:'));
             console.log(chalk.blue(`PID: ${pid}`));
-            console.log(chalk.blue(`Платформа: ${process.platform}`));
+            console.log(chalk.blue(`Platform: ${process.platform}`));
         }
     }
 
     async waitForEnter() {
-        console.log(chalk.gray('\nНажмите Enter для продолжения...'));
+        console.log(chalk.gray('\n' + this.locale.get('bot_manager.press_enter')));
         
         await inquirer.prompt([
             {
                 type: 'input',
                 name: 'continue',
-                message: 'Нажмите Enter...'
+                message: this.locale.get('prompts.continue')
             }
         ]);
         
@@ -1105,10 +967,10 @@ GUILD_ID=${cleanGuildId}`;
     }
 
     exit() {
-        console.log(chalk.cyan('\nЗавершение работы...'));
+        console.log(chalk.cyan('\n' + this.locale.get('bot_manager.shutting_down')));
         
         if (this.isBotRunning) {
-            console.log(chalk.yellow('Останавливаю бота перед выходом...'));
+            console.log(chalk.yellow('Stopping bot before exit...'));
             this.stopBot().then(() => {
                 process.exit(0);
             });
@@ -1119,12 +981,12 @@ GUILD_ID=${cleanGuildId}`;
 }
 
 process.on('SIGINT', () => {
-    console.log(chalk.yellow('\n\nПринудительное завершение...'));
+    console.log(chalk.yellow('\n\nForce shutdown...'));
     process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-    console.log(chalk.yellow('\n\nЗавершение работы...'));
+    console.log(chalk.yellow('\n\nShutting down...'));
     process.exit(0);
 });
 
