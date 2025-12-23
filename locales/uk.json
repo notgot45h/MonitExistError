@@ -1,7 +1,7 @@
 {
   "language_info": {
     "display_name": "Ukrainian",
-    "native_name": "Українська"
+    "native_name": "Українська (Written Automatically by AI)"
   },
   "bot_manager": {
     "title": "Менеджер Discord бота",
@@ -10,7 +10,6 @@
     "dependencies": "Залежності",
     "configuration": "Конфігурація",
     "nodejs": "Node.js",
-    "git_updates": "Оновлення Git",
     "running": "Запущено",
     "stopped": "Зупинено",
     "installed": "Встановлено",
@@ -18,8 +17,6 @@
     "configured": "Налаштовано",
     "not_configured": "Не налаштовано",
     "found_version": "Знайдено версію: {0}",
-    "available": "Доступно",
-    "not_installed": "Не встановлено",
     "current_status": "Поточний статус системи:",
     "select_action": "Виберіть дію:",
     "press_enter": "Натисніть Enter для продовження...",
@@ -28,10 +25,6 @@
   "menu": {
     "start_bot": "Запустити бота",
     "stop_bot": "Зупинити бота",
-    "update_bot": "Оновити бота з Git",
-    "toggle_auto_update": "Увімкнути/вимкнути автооновлення",
-    "update_status": "Статус оновлень",
-    "clean_backups": "Очистити всі резервні копії",
     "setup_bot": "Налаштувати бота",
     "install_deps": "Встановити залежності",
     "update_deps": "Оновити залежності",
@@ -42,34 +35,6 @@
     "change_language": "Змінити мову",
     "exit": "Вихід"
   },
-  "update_system": {
-    "title": "Статус системи оновлень",
-    "git": "Git",
-    "repository": "Репозиторій",
-    "auto_updates": "Автооновлення",
-    "last_update": "Останнє оновлення",
-    "branch": "Гілка",
-    "backups": "Резервні копії",
-    "enabled": "Увімкнено",
-    "disabled": "Вимкнено",
-    "never": "Ніколи",
-    "no_backups": "Немає резервних копій",
-    "backups_count": "{0} резервних копій ({1} МБ)",
-    "repository_url": "Репозиторій: {0}",
-    "updates_available": "Доступні оновлення! Використовуйте \"Оновити бота з Git\"",
-    "checking_updates": "Перевірка оновлень...",
-    "up_to_date": "Бот оновлений до останньої версії!",
-    "update_available": "Доступне оновлення!",
-    "changes": "Зміни:",
-    "update_failed": "Помилка перевірки оновлень:",
-    "not_git_repo": "Папка не є Git репозиторієм",
-    "update_started": "Запуск процесу оновлення...",
-    "backup_created": "Резервну копію створено:",
-    "update_completed": "Оновлення успішно завершено!",
-    "update_error": "Помилка під час оновлення:",
-    "backup_restore": "Відновлення з резервної копії...",
-    "restore_error": "Помилка відновлення:"
-  },
   "messages": {
     "bot_started": "Бот успішно запущено! (PID: {0})",
     "bot_stopped": "Бот зупинено!",
@@ -79,29 +44,15 @@
     "config_saved": "Налаштування збережено!",
     "config_reset": "Конфігурацію скинуто!",
     "commands_deployed": "Команди успішно відправлено!",
-    "auto_updates_enabled": "Автооновлення увімкнено!",
-    "auto_updates_disabled": "Автооновлення вимкнено!",
-    "backups_cleaned": "Очищено {0} старих резервних копій. Залишено: {1}",
-    "all_backups_deleted": "Видалено всіх резервних копій: {0}",
-    "backup_created_success": "Резервну копію створено: {0}",
-    "restore_success": "Відновлено: {0}",
-    "temp_backup_failed": "Не вдалося створити тимчасову резервну копію критичних файлів"
+    "env_template_created": "Створено шаблон .env. Налаштуйте його вручну!",
+    "env_not_configured": "Бот не налаштовано! Відредагуйте файл .env вручну."
   },
   "errors": {
     "failed_to_start": "Помилка запуску бота: {0}",
     "failed_to_stop": "Помилка зупинки бота: {0}",
     "failed_to_install": "Помилка встановлення залежностей!",
     "failed_to_update": "Помилка оновлення залежностей!",
-    "failed_to_deploy": "Помилка деплоя команд: {0}",
-    "git_not_installed": "Git не встановлено на системі!",
-    "repository_not_found": "Папка не є Git репозиторієм!",
-    "update_failed": "Помилка під час оновлення: {0}",
-    "restore_failed": "Помилка відновлення: {0}",
-    "backup_error": "Помилка створення резервної копії:",
-    "cleanup_error": "Не вдалося очистити старі резервні копії:",
-    "delete_backups_error": "Помилка видалення резервних копій:",
-    "load_config_error": "Помилка завантаження конфігурації оновлень:",
-    "save_config_error": "Помилка збереження конфігурації оновлень:"
+    "failed_to_deploy": "Помилка деплоя команд: {0}"
   },
   "prompts": {
     "enter_token": "Введіть Discord Token бота:",

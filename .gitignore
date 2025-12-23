@@ -30,7 +30,6 @@ package-lock.json
 # Configs
 /config.json
 /update-config.json
-/language-config.json
 
 # Storage files
 

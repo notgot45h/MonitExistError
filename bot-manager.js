@@ -85,10 +85,8 @@ class LocaleManager {
                     "menu": {
                         "start_bot": "Start bot",
                         "stop_bot": "Stop bot",
-                        "setup_bot": "Configure bot",
                         "install_deps": "Install dependencies",
                         "update_deps": "Update dependencies",
-                        "reset_config": "Reset configuration",
                         "deploy_guild": "Deploy commands (guild)",
                         "deploy_global": "Deploy commands (global)",
                         "system_status": "System status",
@@ -103,7 +101,10 @@ class LocaleManager {
                         "deps_installed": "Dependencies installed successfully!",
                         "config_saved": "Configuration saved!",
                         "config_reset": "Configuration reset!",
-                        "commands_deployed": "Commands deployed successfully!"
+                        "commands_deployed": "Commands deployed successfully!",
+                        "env_template_created": ".env template created. Please configure it manually!",
+                        "env_not_configured": "Bot is not configured! Please edit .env file manually.",
+                        "env_instructions": "\nTo configure the bot:\n1. Edit the .env file with your credentials\n2. Restart the bot"
                     },
                     "errors": {
                         "failed_to_start": "Failed to start bot: {0}",
@@ -113,13 +114,6 @@ class LocaleManager {
                         "failed_to_deploy": "Failed to deploy commands: {0}"
                     },
                     "prompts": {
-                        "enter_token": "Enter Discord Bot Token:",
-                        "token_empty": "Token cannot be empty!",
-                        "enter_client_id": "Enter Bot Client ID:",
-                        "enter_guild_id": "Enter Server ID:",
-                        "client_id_invalid": "Client ID must contain numbers!",
-                        "guild_id_invalid": "Server ID must contain numbers!",
-                        "create_new_config": "Create new configuration?",
                         "continue": "Press Enter...",
                         "select_language": "Select language:"
                     },
@@ -157,10 +151,8 @@ class LocaleManager {
                     "menu": {
                         "start_bot": "Запустить бота",
                         "stop_bot": "Остановить бота",
-                        "setup_bot": "Настроить бота",
                         "install_deps": "Установить зависимости",
                         "update_deps": "Обновить зависимости",
-                        "reset_config": "Сброс настроек",
                         "deploy_guild": "Деплой команд (гильдия)",
                         "deploy_global": "Деплой команд (глобально)",
                         "system_status": "Статус системы",
@@ -175,7 +167,10 @@ class LocaleManager {
                         "deps_installed": "Зависимости успешно установлены!",
                         "config_saved": "Настройки сохранены!",
                         "config_reset": "Конфигурация сброшена!",
-                        "commands_deployed": "Команды успешно отправлены!"
+                        "commands_deployed": "Команды успешно отправлены!",
+                        "env_template_created": "Создан шаблон .env. Настройте его вручную!",
+                        "env_not_configured": "Бот не настроен! Отредактируйте файл .env вручную.",
+                        "env_instructions": "\nЧтобы настроить бота:\n1. Отредактируйте файл .env с вашими данными\n2. Перезапустите бота"
                     },
                     "errors": {
                         "failed_to_start": "Ошибка запуска бота: {0}",
@@ -185,13 +180,6 @@ class LocaleManager {
                         "failed_to_deploy": "Ошибка деплоя команд: {0}"
                     },
                     "prompts": {
-                        "enter_token": "Введите Discord Token бота:",
-                        "token_empty": "Token не может быть пустым!",
-                        "enter_client_id": "Введите Client ID бота:",
-                        "enter_guild_id": "Введите Server ID:",
-                        "client_id_invalid": "Client ID должен содержать цифры!",
-                        "guild_id_invalid": "Server ID должен содержать цифры!",
-                        "create_new_config": "Создать новую конфигурацию?",
                         "continue": "Нажмите Enter...",
                         "select_language": "Выберите язык:"
                     },
@@ -457,9 +445,8 @@ class BotManager {
                 case '-i':
                     await this.installDependencies();
                     break;
-                case '--setup':
-                case '-s':
-                    await this.setupConfiguration();
+                case '--create-env':
+                    await this.createEnvTemplate();
                     break;
                 case '--start':
                     await this.startBot();
@@ -475,9 +462,6 @@ class BotManager {
                     break;
                 case '--update':
                     await this.updateDependencies();
-                    break;
-                case '--reset':
-                    await this.resetConfiguration();
                     break;
                 case '--status':
                     await this.showDetailedStatus();
@@ -512,20 +496,19 @@ class BotManager {
         
         console.log(this.locale.get('help.auto_commands') + ':');
         console.log(chalk.green('  --install, -i') + '          - ' + 'Install dependencies');
-        console.log(chalk.green('  --setup, -s') + '            - ' + 'Configure bot');
+        console.log(chalk.green('  --create-env') + '            - ' + 'Create .env template file');
         console.log(chalk.green('  --start') + '                - ' + 'Start bot');
         console.log(chalk.green('  --stop') + '                 - ' + 'Stop bot');
         console.log(chalk.green('  --deploy-guild') + '         - ' + 'Deploy guild commands');
         console.log(chalk.green('  --deploy-global') + '        - ' + 'Deploy global commands');
         console.log(chalk.green('  --update') + '               - ' + 'Update dependencies');
-        console.log(chalk.green('  --reset') + '                - ' + 'Reset configuration');
         console.log(chalk.green('  --status') + '               - ' + 'System status');
         console.log(chalk.green('  --change-language, -l') + '   - ' + 'Change interface language');
         console.log(chalk.green('  --refresh-locales') + '       - ' + 'Refresh available locales');
         console.log(chalk.green('  --help, -h') + '             - ' + 'This help\n');
         
         console.log(this.locale.get('help.examples') + ':');
-        console.log(chalk.cyan('  node bot-manager.js --install --setup --start'));
+        console.log(chalk.cyan('  node bot-manager.js --install --create-env --start'));
         console.log(chalk.cyan('  npm start'));
         process.exit(0);
     }
@@ -544,10 +527,8 @@ class BotManager {
                 new inquirer.Separator(),
                 { name: this.locale.get('menu.change_language'), value: 'change-language' },
                 new inquirer.Separator(),
-                { name: this.locale.get('menu.setup_bot'), value: 'setup' },
                 { name: this.locale.get('menu.install_deps'), value: 'install' },
                 { name: this.locale.get('menu.update_deps'), value: 'update' },
-                { name: this.locale.get('menu.reset_config'), value: 'reset' },
                 new inquirer.Separator(),
                 { name: this.locale.get('menu.deploy_guild'), value: 'deploy-guild' },
                 { name: this.locale.get('menu.deploy_global'), value: 'deploy-global' },
@@ -635,17 +616,11 @@ class BotManager {
             case 'change-language':
                 await this.changeLanguage();
                 break;
-            case 'setup':
-                await this.setupConfiguration();
-                break;
             case 'install':
                 await this.installDependencies();
                 break;
             case 'update':
                 await this.updateDependencies();
-                break;
-            case 'reset':
-                await this.resetConfiguration();
                 break;
             case 'deploy-guild':
                 await this.deployCommands('guild');
@@ -729,11 +704,11 @@ class BotManager {
         
             const envContent = fs.readFileSync(this.envFile, 'utf8');
             const hasToken = envContent.includes('DISCORD_TOKEN') && 
-                          !envContent.includes('your_bot_token_here') &&
-                        envContent.match(/DISCORD_TOKEN=[A-Za-z0-9._-]{59,60}/);
-        
+                          !envContent.includes('your_bot_token_here');
+            
             const hasClientId = envContent.includes('CLIENT_ID') && 
                           !envContent.includes('your_client_id_here');
+            
             const hasGuildId = envContent.includes('GUILD_ID') && 
                          !envContent.includes('your_guild_id_here');
         
@@ -783,7 +758,8 @@ class BotManager {
             await this.runCommand('npm install --no-fund --no-audit', 'Installing dependencies...');
 
             if (!fs.existsSync(this.envFile)) {
-                await this.createDefaultEnv();
+                console.log(chalk.yellow('\nCreating .env template...'));
+                await this.createEnvTemplate();
             }
 
             console.log(chalk.green(this.locale.get('messages.deps_installed')));
@@ -794,68 +770,56 @@ class BotManager {
         }
     }
 
-    async createDefaultEnv() {
-        const defaultEnv = `DISCORD_TOKEN=your_bot_token_here
+    async createEnvTemplate() {
+        console.log(chalk.cyan('\nCreating .env template file...'));
+        
+        const template = `# Discord Bot Configuration
+# ============================================
+# 1. Get your Discord Bot Token:
+#    - Go to https://discord.com/developers/applications
+#    - Select your application
+#    - Go to "Bot" section
+#    - Click "Reset Token" or copy existing token
+#
+# 2. Get your Client ID:
+#    - In same application, go to "General Information"
+#    - Copy "Application ID"
+#
+# 3. Get your Guild (Server) ID:
+#    - Enable Developer Mode in Discord (Settings > Advanced)
+#    - Right-click your server > "Copy ID"
+
+DISCORD_TOKEN=your_bot_token_here
 CLIENT_ID=your_client_id_here
-GUILD_ID=your_guild_id_here`;
+GUILD_ID=your_guild_id_here
 
-        fs.writeFileSync(this.envFile, defaultEnv);
-        console.log(chalk.yellow('Created .env file with default settings'));
-    }
+# Optional: Add more environment variables as needed
+# NODE_ENV=production
+# LOG_LEVEL=info
 
-    async setupConfiguration() {
-        console.log(chalk.cyan('\n' + this.locale.get('menu.setup_bot') + '...'));
+# ============================================
+# IMPORTANT:
+# - Replace placeholder values with your actual data
+# - Never commit this file to public repositories
+# - Add .env to .gitignore`;
 
-        console.log(chalk.yellow('Warning: Token will be displayed during input for verification.'));
-        console.log(chalk.yellow('Make sure no one can see your screen!\n'));
-
-        const questions = [
-            {
-                type: 'input',
-                name: 'token',
-                message: this.locale.get('prompts.enter_token'),
-                validate: input => {
-                    if (!input) return this.locale.get('prompts.token_empty');
-                    if (input.includes('your_bot_token_here')) return 'Replace your_bot_token_here with real token!';
-                    return true;
-                }
-            },
-            {
-                type: 'input',
-                name: 'clientId',
-                message: this.locale.get('prompts.enter_client_id'),
-                validate: input => {
-                    const cleanId = input.replace(/\D/g, '');
-                    return cleanId.length > 0 ? true : this.locale.get('prompts.client_id_invalid');
-                }
-            },
-            {
-                type: 'input',
-                name: 'guildId',
-                message: this.locale.get('prompts.enter_guild_id'),
-                validate: input => {
-                    const cleanId = input.replace(/\D/g, '');
-                    return cleanId.length > 0 ? true : this.locale.get('prompts.guild_id_invalid');
-                }
-            }
-        ];
-
-        const answers = await inquirer.prompt(questions);
-
-        const cleanClientId = answers.clientId.replace(/\D/g, '');
-        const cleanGuildId = answers.guildId.replace(/\D/g, '');
-
-        const envContent = `DISCORD_TOKEN=${answers.token}
-CLIENT_ID=${cleanClientId}
-GUILD_ID=${cleanGuildId}`;
-
-        fs.writeFileSync(this.envFile, envContent);
-
-        console.log(chalk.green('\n' + this.locale.get('messages.config_saved')));
-        console.log(chalk.blue(`Bot ID: ${cleanClientId}`));
-        console.log(chalk.blue(`Server ID: ${cleanGuildId}`));
-        console.log(chalk.green(`Token: ${answers.token.substring(0, 10)}...`));
-        console.log(chalk.yellow('\nMake sure the .env file is protected and not uploaded to public repositories!'));
+        fs.writeFileSync(this.envFile, template);
+        
+        const envPath = path.resolve(this.envFile);
+        console.log(chalk.yellow('\n═══════════════════════════════════════════════════'));
+        console.log(chalk.green(this.locale.get('messages.env_template_created')));
+        console.log(chalk.yellow('═══════════════════════════════════════════════════'));
+        console.log(chalk.blue('\n.env file created at:'));
+        console.log(chalk.cyan(`  ${envPath}`));
+        console.log(chalk.blue('\nPlease edit this file with:'));
+        console.log(chalk.cyan('  1. Your Discord Bot Token'));
+        console.log(chalk.cyan('  2. Your Client ID'));
+        console.log(chalk.cyan('  3. Your Guild (Server) ID'));
+        console.log(chalk.blue('\nYou can use any text editor:'));
+        console.log(chalk.cyan('  Windows: Notepad, Notepad++, VS Code'));
+        console.log(chalk.cyan('  macOS: TextEdit, VS Code'));
+        console.log(chalk.cyan('  Linux: nano, vim, VS Code'));
+        console.log(chalk.yellow('\n═══════════════════════════════════════════════════\n'));
     }
 
     async startBot() {
@@ -870,9 +834,20 @@ GUILD_ID=${cleanGuildId}`;
             }
         }
 
+        if (!fs.existsSync(this.envFile)) {
+            console.log(chalk.yellow('.env file not found. Creating template...'));
+            await this.createEnvTemplate();
+            console.log(chalk.red(this.locale.get('messages.env_not_configured')));
+            console.log(chalk.cyan(this.locale.get('messages.env_instructions')));
+            return;
+        }
+
         if (!await this.validateConfig()) {
-            console.log(chalk.yellow('Configuration not filled. Starting setup...'));
-            await this.setupConfiguration();
+            console.log(chalk.red(this.locale.get('messages.env_not_configured')));
+            console.log(chalk.yellow('\nPlease edit .env file with your credentials.'));
+            console.log(chalk.blue(`Location: ${path.resolve(this.envFile)}`));
+            console.log(chalk.cyan(this.locale.get('messages.env_instructions')));
+            return;
         }
 
         if (await this.checkBotProcess()) {
@@ -946,7 +921,7 @@ GUILD_ID=${cleanGuildId}`;
 
         if (!await this.validateConfig()) {
             console.log(chalk.red('Configuration not filled!'));
-            console.log(chalk.yellow('First configure the bot.'));
+            console.log(chalk.yellow('First configure the bot by editing .env file.'));
             return;
         }
 
@@ -976,30 +951,6 @@ GUILD_ID=${cleanGuildId}`;
             console.log(chalk.green(this.locale.get('messages.deps_installed')));
         } catch (error) {
             console.log(chalk.red(this.locale.get('errors.failed_to_update')));
-        }
-    }
-
-    async resetConfiguration() {
-        console.log(chalk.cyan('\n' + this.locale.get('menu.reset_config') + '...'));
-
-        if (fs.existsSync(this.envFile)) {
-            fs.unlinkSync(this.envFile);
-            console.log(chalk.green('.env file deleted!'));
-        } else {
-            console.log(chalk.yellow('.env file not found.'));
-        }
-
-        const { createNew } = await inquirer.prompt({
-            type: 'confirm',
-            name: 'createNew',
-            message: this.locale.get('prompts.create_new_config'),
-            default: true
-        });
-
-        if (createNew) {
-            await this.setupConfiguration();
-        } else {
-            console.log(chalk.blue('You can create configuration later with "Configure bot" command'));
         }
     }
 
@@ -1040,14 +991,26 @@ GUILD_ID=${cleanGuildId}`;
                 
                 lines.forEach(line => {
                     if (line.startsWith('DISCORD_TOKEN=')) {
-                        const token = line.replace('DISCORD_TOKEN=', '');
-                        console.log(chalk.green(`DISCORD_TOKEN: ${token.substring(0, 10)}...`));
+                        const token = line.replace('DISCORD_TOKEN=', '').trim();
+                        if (token !== 'your_bot_token_here' && token.length > 10) {
+                            console.log(chalk.green(`DISCORD_TOKEN: ${token.substring(0, 10)}...`));
+                        } else {
+                            console.log(chalk.red('DISCORD_TOKEN: Not configured'));
+                        }
                     } else if (line.startsWith('CLIENT_ID=')) {
-                        const clientId = line.replace('CLIENT_ID=', '');
-                        console.log(chalk.blue(`Client ID: ${clientId}`));
+                        const clientId = line.replace('CLIENT_ID=', '').trim();
+                        if (clientId !== 'your_client_id_here' && clientId.length > 0) {
+                            console.log(chalk.blue(`Client ID: ${clientId}`));
+                        } else {
+                            console.log(chalk.red('Client ID: Not configured'));
+                        }
                     } else if (line.startsWith('GUILD_ID=')) {
-                        const guildId = line.replace('GUILD_ID=', '');
-                        console.log(chalk.blue(`Guild ID: ${guildId}`));
+                        const guildId = line.replace('GUILD_ID=', '').trim();
+                        if (guildId !== 'your_guild_id_here' && guildId.length > 0) {
+                            console.log(chalk.blue(`Guild ID: ${guildId}`));
+                        } else {
+                            console.log(chalk.red('Guild ID: Not configured'));
+                        }
                     }
                 });
             } catch (e) {
@@ -1055,6 +1018,10 @@ GUILD_ID=${cleanGuildId}`;
             }
         } else {
             console.log(chalk.red('Configuration not filled'));
+            console.log(chalk.cyan('\nTo configure the bot:'));
+            console.log(chalk.yellow('  1. Edit the .env file with your credentials'));
+            console.log(chalk.blue(`     Location: ${path.resolve(this.envFile)}`));
+            console.log(chalk.yellow('  2. Restart the bot'));
         }
 
         console.log(chalk.cyan('\nLanguage settings:'));
