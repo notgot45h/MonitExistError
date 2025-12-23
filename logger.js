@@ -7,6 +7,7 @@ class Logger {
         this.logsDir = path.join(__dirname, 'logs');
         this.logFile = path.join(this.logsDir, 'bot-manager.log');
         this.enabled = true;
+        this.logToConsole = false; // По умолчанию не выводим логи в консоль
         this.logLevels = {
             INFO: 'INFO',
             WARN: 'WARN',
@@ -35,6 +36,11 @@ class Logger {
         }
     }
 
+    // Метод для включения/выключения вывода в консоль
+    setConsoleOutput(enabled) {
+        this.logToConsole = enabled;
+    }
+
     getTimestamp() {
         const now = new Date();
         const date = now.toISOString().split('T')[0];
@@ -55,8 +61,12 @@ class Logger {
             
             fs.appendFileSync(this.logFile, logMessage + '\n');
             
-            this.consoleOutput(level, logMessage);
+            // Выводим в консоль только если включено
+            if (this.logToConsole) {
+                this.consoleOutput(level, logMessage);
+            }
         } catch (error) {
+            // В случае ошибки записи в файл, выводим в консоль
             console.error(chalk.red('Failed to write log:'), error.message);
         }
     }

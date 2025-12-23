@@ -277,6 +277,9 @@ class LocaleManager {
 class BotManager {
     constructor() {
         this.logger = new Logger();
+        // Выключаем вывод логов в консоль меню
+        this.logger.setConsoleOutput(false);
+        
         this.isBotRunning = false;
         this.botProcess = null;
         this.pidFile = path.join(__dirname, 'bot.pid');
@@ -446,6 +449,10 @@ class BotManager {
     }
 
     viewLogs() {
+        // Включаем вывод логов только для этой команды
+        const tempLogger = new Logger();
+        tempLogger.setConsoleOutput(true);
+        
         const logs = this.logger.getRecentLogs(100);
         console.log(chalk.cyan('\nRecent logs (last 100 lines):\n'));
         logs.forEach(log => console.log(chalk.gray(log)));
