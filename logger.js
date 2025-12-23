@@ -36,7 +36,6 @@ class Logger {
         }
     }
 
-    // Метод для включения/выключения вывода в консоль
     setConsoleOutput(enabled) {
         this.logToConsole = enabled;
     }
@@ -61,7 +60,6 @@ class Logger {
             
             fs.appendFileSync(this.logFile, logMessage + '\n');
             
-            // Выводим в консоль только если включено
             if (this.logToConsole) {
                 this.consoleOutput(level, logMessage);
             }
