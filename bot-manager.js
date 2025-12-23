@@ -277,7 +277,6 @@ class LocaleManager {
 class BotManager {
     constructor() {
         this.logger = new Logger();
-        // Выключаем вывод логов в консоль меню
         this.logger.setConsoleOutput(false);
         
         this.isBotRunning = false;
@@ -449,7 +448,6 @@ class BotManager {
     }
 
     viewLogs() {
-        // Включаем вывод логов только для этой команды
         const tempLogger = new Logger();
         tempLogger.setConsoleOutput(true);
         
