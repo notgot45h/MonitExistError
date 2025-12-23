@@ -5,9 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const LocaleBackupManager = require('./locale-backup-manager');
+const Logger = require('./logger');
 
 class LocaleManager {
-    constructor() {
+    constructor(logger) {
+        this.logger = logger;
         this.localesDir = path.join(__dirname, 'locales');
         this.configFile = path.join(__dirname, 'language-config.json');
         this.defaultLanguage = 'en';
@@ -25,21 +27,21 @@ class LocaleManager {
         try {
             if (!fs.existsSync(this.localesDir)) {
                 fs.mkdirSync(this.localesDir, { recursive: true });
-                console.log(chalk.yellow('Created locales directory'));
+                this.logger.system('Created locales directory');
             }
             
             this.loadAvailableLanguages();
             
             if (this.availableLanguages.length === 0) {
-                console.log(chalk.yellow('No locale files found. Creating default locales...'));
+                this.logger.warn('No locale files found. Creating default locales...');
                 const backupManager = new LocaleBackupManager(this.localesDir);
                 backupManager.createDefaultLocales();
                 this.loadAvailableLanguages();
             }
             
-            console.log(chalk.blue(`Available languages: ${this.availableLanguages.join(', ')}`));
+            this.logger.info(`Available languages: ${this.availableLanguages.join(', ')}`);
         } catch (error) {
-            console.log(chalk.red('Error initializing locales:'), error.message);
+            this.logger.error('Error initializing locales', error);
             this.availableLanguages = [this.defaultLanguage];
         }
     }
@@ -52,7 +54,7 @@ class LocaleManager {
                 .map(file => file.replace('.json', ''))
                 .sort();
         } catch (error) {
-            console.log(chalk.red('Error loading available languages:'), error.message);
+            this.logger.error('Error loading available languages', error);
             this.availableLanguages = [this.defaultLanguage];
         }
     }
@@ -64,7 +66,7 @@ class LocaleManager {
                 this.currentLanguage = config.language || this.defaultLanguage;
                 
                 if (!this.availableLanguages.includes(this.currentLanguage)) {
-                    console.log(chalk.yellow(`Configured language "${this.currentLanguage}" not found. Using default.`));
+                    this.logger.warn(`Configured language "${this.currentLanguage}" not found. Using default.`);
                     this.currentLanguage = this.defaultLanguage;
                     this.saveConfig();
                 }
@@ -72,7 +74,7 @@ class LocaleManager {
                 this.saveConfig();
             }
         } catch (error) {
-            console.log(chalk.yellow('Error loading language config:'), error.message);
+            this.logger.error('Error loading language config', error);
             this.currentLanguage = this.defaultLanguage;
         }
     }
@@ -85,8 +87,9 @@ class LocaleManager {
                 availableLanguages: this.availableLanguages
             };
             fs.writeFileSync(this.configFile, JSON.stringify(config, null, 2));
+            this.logger.debug(`Language config saved: ${this.currentLanguage}`);
         } catch (error) {
-            console.log(chalk.red('Error saving language config:'), error.message);
+            this.logger.error('Error saving language config', error);
         }
     }
 
@@ -95,9 +98,9 @@ class LocaleManager {
             const localeFile = path.join(this.localesDir, `${languageCode}.json`);
             
             if (!fs.existsSync(localeFile)) {
-                console.log(chalk.yellow(`Locale file not found: ${languageCode}.json`));
+                this.logger.warn(`Locale file not found: ${languageCode}.json`);
                 if (languageCode !== this.defaultLanguage) {
-                    console.log(chalk.yellow(`Falling back to default language: ${this.defaultLanguage}`));
+                    this.logger.warn(`Falling back to default language: ${this.defaultLanguage}`);
                     return this.loadLocale(this.defaultLanguage);
                 }
                 return false;
@@ -113,9 +116,10 @@ class LocaleManager {
             
             this.validateLocaleStructure(languageCode, localeData);
             
+            this.logger.info(`Locale loaded: ${languageCode}`);
             return true;
         } catch (error) {
-            console.log(chalk.red(`Error loading locale ${languageCode}:`), error.message);
+            this.logger.error(`Error loading locale ${languageCode}`, error);
             if (languageCode !== this.defaultLanguage) {
                 return this.loadLocale(this.defaultLanguage);
             }
@@ -134,11 +138,11 @@ class LocaleManager {
         }
         
         if (missingSections.length > 0) {
-            console.log(chalk.yellow(`Locale "${languageCode}" missing sections: ${missingSections.join(', ')}`));
+            this.logger.warn(`Locale "${languageCode}" missing sections: ${missingSections.join(', ')}`);
         }
         
         if (!localeData.language_info || !localeData.language_info.display_name) {
-            console.log(chalk.yellow(`Locale "${languageCode}" missing language_info section or display_name`));
+            this.logger.warn(`Locale "${languageCode}" missing language_info section or display_name`);
         }
     }
 
@@ -173,6 +177,7 @@ class LocaleManager {
             
             return value || key;
         } catch (error) {
+            this.logger.error(`Error getting locale key: ${key}`, error);
             return key;
         }
     }
@@ -211,11 +216,11 @@ class LocaleManager {
             if (this.loadLocale(languageCode)) {
                 this.currentLanguage = languageCode;
                 this.saveConfig();
-                console.log(chalk.green(`Language changed to: ${languageCode.toUpperCase()}`));
+                this.logger.info(`Language changed to: ${languageCode.toUpperCase()}`);
                 return true;
             }
         } else {
-            console.log(chalk.red(`Language "${languageCode}" is not available. Available: ${this.availableLanguages.join(', ')}`));
+            this.logger.error(`Language "${languageCode}" is not available. Available: ${this.availableLanguages.join(', ')}`);
         }
         return false;
     }
@@ -245,7 +250,7 @@ class LocaleManager {
                         }
                     }
                 } catch (error) {
-                    console.log(chalk.yellow(`Error reading language info for ${langCode}:`), error.message);
+                    this.logger.warn(`Error reading language info for ${langCode}: ${error.message}`);
                 }
             }
             
@@ -271,17 +276,20 @@ class LocaleManager {
 
 class BotManager {
     constructor() {
+        this.logger = new Logger();
         this.isBotRunning = false;
         this.botProcess = null;
         this.pidFile = path.join(__dirname, 'bot.pid');
         this.envFile = path.join(__dirname, '.env');
-        this.locale = new LocaleManager();
+        this.locale = new LocaleManager(this.logger);
         
+        this.logger.system('BotManager initialized');
         this.handleCommandLineArgs();
     }
 
     async handleCommandLineArgs() {
         const args = process.argv.slice(2);
+        this.logger.logCommand('bot-manager.js', args);
         
         if (args.length === 0) {
             await this.showMainMenu();
@@ -291,9 +299,10 @@ class BotManager {
     }
 
     async executeCommandLineArgs(args) {
-        console.log(chalk.blue('Discord Bot Manager - Automatic Mode\n'));
+        this.logger.info('Discord Bot Manager - Automatic Mode');
         
         for (const arg of args) {
+            this.logger.info(`Processing argument: ${arg}`);
             switch (arg) {
                 case '--install':
                 case '-i':
@@ -337,8 +346,14 @@ class BotManager {
                 case '--repair-locales':
                     await this.repairLocales();
                     break;
+                case '--view-logs':
+                    this.viewLogs();
+                    break;
+                case '--clear-logs':
+                    this.clearLogs();
+                    break;
                 default:
-                    console.log(chalk.yellow(`Unknown argument: ${arg}`));
+                    this.logger.warn(`Unknown argument: ${arg}`);
                     this.showHelp();
             }
         }
@@ -363,17 +378,23 @@ class BotManager {
         console.log(chalk.green('  --change-language, -l') + '   - ' + 'Change interface language');
         console.log(chalk.green('  --refresh-locales') + '       - ' + 'Refresh available locales');
         console.log(chalk.green('  --repair-locales') + '        - ' + 'Repair corrupted locale files');
+        console.log(chalk.green('  --view-logs') + '            - ' + 'View recent logs');
+        console.log(chalk.green('  --clear-logs') + '           - ' + 'Clear all logs');
         console.log(chalk.green('  --help, -h') + '             - ' + 'This help\n');
         
         console.log(this.locale.get('help.examples') + ':');
         console.log(chalk.cyan('  node bot-manager.js --install --create-env --start'));
         console.log(chalk.cyan('  npm start'));
+        
+        this.logger.info('Help displayed');
         process.exit(0);
     }
 
     async showMainMenu() {
         console.clear();
         await this.checkSystemStatus();
+        
+        this.logger.info('Displaying main menu');
         
         const { action } = await inquirer.prompt({
             type: 'list',
@@ -397,35 +418,58 @@ class BotManager {
             pageSize: 15
         });
 
+        this.logger.logInteraction('menu_selection', { action });
         await this.handleAction(action);
     }
 
     async refreshLocales() {
-        console.log(chalk.cyan('\nRefreshing available locales...'));
+        this.logger.info('Refreshing available locales...');
         const availableLanguages = this.locale.refreshAvailableLanguages();
-        console.log(chalk.green(`Found ${availableLanguages.length} locales: ${availableLanguages.join(', ')}`));
+        this.logger.info(`Found ${availableLanguages.length} locales: ${availableLanguages.join(', ')}`);
     }
 
     async repairLocales() {
-        console.log(chalk.cyan('\nRepairing locale files...'));
+        this.logger.info('Repairing locale files...');
         const backupManager = new LocaleBackupManager(this.locale.localesDir);
         
         for (const langCode of this.locale.availableLanguages) {
             const result = backupManager.repairLocale(langCode);
             if (result) {
-                console.log(chalk.green(`  ✓ ${langCode}: repaired`));
+                this.logger.info(`  ✓ ${langCode}: repaired`);
             } else {
-                console.log(chalk.yellow(`  ⚠ ${langCode}: could not repair`));
+                this.logger.warn(`  ⚠ ${langCode}: could not repair`);
             }
         }
         
-        console.log(chalk.green('\nLocale repair completed!'));
+        this.logger.info('Locale repair completed!');
         this.locale.refreshAvailableLanguages();
+    }
+
+    viewLogs() {
+        const logs = this.logger.getRecentLogs(100);
+        console.log(chalk.cyan('\nRecent logs (last 100 lines):\n'));
+        logs.forEach(log => console.log(chalk.gray(log)));
+        console.log(chalk.cyan('\nTotal log lines:'), this.logger.getLogStats().lines);
+        console.log(chalk.cyan('Log file:'), this.logger.getLogStats().path);
+        process.exit(0);
+    }
+
+    clearLogs() {
+        if (this.logger.clearLogs()) {
+            console.log(chalk.green('Logs cleared successfully!'));
+        } else {
+            console.log(chalk.red('Failed to clear logs!'));
+        }
+        process.exit(0);
     }
 
     async checkSystemStatus() {
         this.isBotRunning = await this.checkBotProcess();
         const systemStatus = await this.getSystemStatus();
+        
+        this.logger.info('Checking system status');
+        this.logger.debug(`Bot running: ${this.isBotRunning}`);
+        this.logger.debug(`System status: ${JSON.stringify(systemStatus)}`);
         
         console.log(chalk.blue(this.locale.get('bot_manager.current_status')));
         console.log(chalk.white('┌──────────────────'));
@@ -447,7 +491,7 @@ class BotManager {
         console.log(chalk.white(this.locale.formatString(
             '│ {0}           {1}',
             this.locale.get('bot_manager.nodejs'),
-            systemStatus.node 
+            systemStatus.node
         )));
         console.log(chalk.white('└──────────────────\n'));
     }
@@ -481,6 +525,8 @@ class BotManager {
     }
 
     async handleAction(action) {
+        this.logger.info(`Handling action: ${action}`);
+        
         switch (action) {
             case 'start':
                 await this.startBot();
@@ -522,6 +568,7 @@ class BotManager {
         const languageChoices = this.locale.getLanguageList();
         
         if (languageChoices.length === 0) {
+            this.logger.error('No languages available!');
             console.log(chalk.red('No languages available!'));
             return;
         }
@@ -531,6 +578,11 @@ class BotManager {
             name: 'selectedLanguage',
             message: this.locale.get('prompts.select_language'),
             choices: languageChoices
+        });
+        
+        this.logger.logInteraction('language_change', { 
+            from: this.locale.getCurrentLanguage(), 
+            to: selectedLanguage 
         });
         
         this.locale.setLanguage(selectedLanguage);
@@ -588,40 +640,49 @@ class BotManager {
                          !envContent.includes('your_guild_id_here');
         
             return hasToken && hasClientId && hasGuildId;
-        } catch {
+        } catch (error) {
+            this.logger.error('Error validating config', error);
             return false;
         }
     }
 
     async runCommand(command, message = 'Executing command...') {
+        this.logger.info(message);
+        
         return new Promise((resolve, reject) => {
-            if (message) console.log(chalk.blue(`${message}`));
-            
             const child = exec(command, (error, stdout, stderr) => {
                 if (error) {
-                    console.log(chalk.red(`Error: ${error.message}`));
+                    this.logger.error(`Command failed: ${command}`, error);
                     reject(error);
                     return;
                 }
                 
-                if (stdout) console.log(chalk.gray(stdout));
-                if (stderr) console.log(chalk.yellow(stderr));
+                if (stdout) {
+                    this.logger.debug(`stdout: ${stdout}`);
+                }
+                if (stderr) {
+                    this.logger.warn(`stderr: ${stderr}`);
+                }
                 
+                this.logger.info(`Command completed: ${command}`);
                 resolve({ stdout, stderr });
             });
         });
     }
 
     async installDependencies() {
+        this.logger.info(this.locale.get('menu.install_deps') + '...');
         console.log(chalk.cyan('\n' + this.locale.get('menu.install_deps') + '...'));
         
         if (!await this.checkNodeJS()) {
+            this.logger.error('Node.js is not installed!');
             console.log(chalk.red('Node.js is not installed!'));
             console.log(chalk.yellow('Download from: https://nodejs.org/'));
             return false;
         }
 
         if (!await this.checkNPM()) {
+            this.logger.error('npm not found!');
             console.log(chalk.red('npm not found!'));
             console.log(chalk.yellow('Reinstall Node.js'));
             return false;
@@ -633,19 +694,22 @@ class BotManager {
             await this.runCommand('npm install --no-fund --no-audit', 'Installing dependencies...');
 
             if (!fs.existsSync(this.envFile)) {
-                console.log(chalk.yellow('\nCreating .env template...'));
+                this.logger.warn('.env file not found, creating template...');
                 await this.createEnvTemplate();
             }
 
+            this.logger.info('Dependencies installed successfully');
             console.log(chalk.green(this.locale.get('messages.deps_installed')));
             return true;
         } catch (error) {
+            this.logger.error('Failed to install dependencies', error);
             console.log(chalk.red(this.locale.get('errors.failed_to_install')));
             return false;
         }
     }
 
     async createEnvTemplate() {
+        this.logger.info('Creating .env template file...');
         console.log(chalk.cyan('\nCreating .env template file...'));
         
         const template = `# Discord Bot Configuration
@@ -681,6 +745,8 @@ GUILD_ID=your_guild_id_here
         fs.writeFileSync(this.envFile, template);
         
         const envPath = path.resolve(this.envFile);
+        this.logger.info(`.env template created at: ${envPath}`);
+        
         console.log(chalk.yellow('\n═══════════════════════════════════════════════════'));
         console.log(chalk.green(this.locale.get('messages.env_template_created')));
         console.log(chalk.yellow('═══════════════════════════════════════════════════'));
@@ -698,18 +764,22 @@ GUILD_ID=your_guild_id_here
     }
 
     async startBot() {
+        this.logger.info(this.locale.get('menu.start_bot') + '...');
         console.log(chalk.cyan('\n' + this.locale.get('menu.start_bot') + '...'));
 
         if (!fs.existsSync('node_modules')) {
+            this.logger.warn('Dependencies not installed. Installing...');
             console.log(chalk.yellow('Dependencies not installed. Installing...'));
             const installed = await this.installDependencies();
             if (!installed) {
+                this.logger.error('Failed to install dependencies');
                 console.log(chalk.red(this.locale.get('errors.failed_to_install')));
                 return;
             }
         }
 
         if (!fs.existsSync(this.envFile)) {
+            this.logger.warn('.env file not found. Creating template...');
             console.log(chalk.yellow('.env file not found. Creating template...'));
             await this.createEnvTemplate();
             console.log(chalk.red(this.locale.get('messages.env_not_configured')));
@@ -718,6 +788,7 @@ GUILD_ID=your_guild_id_here
         }
 
         if (!await this.validateConfig()) {
+            this.logger.error('Bot configuration is not valid');
             console.log(chalk.red(this.locale.get('messages.env_not_configured')));
             console.log(chalk.yellow('\nPlease edit .env file with your credentials.'));
             console.log(chalk.blue(`Location: ${path.resolve(this.envFile)}`));
@@ -726,6 +797,7 @@ GUILD_ID=your_guild_id_here
         }
 
         if (await this.checkBotProcess()) {
+            this.logger.warn('Bot is already running');
             console.log(chalk.yellow(this.locale.get('messages.bot_already_running')));
             return;
         }
@@ -741,6 +813,7 @@ GUILD_ID=your_guild_id_here
             this.botProcess.unref();
             this.isBotRunning = true;
 
+            this.logger.info(`Bot started with PID: ${this.botProcess.pid}`);
             console.log(chalk.green(this.locale.formatString(
                 this.locale.get('messages.bot_started'),
                 this.botProcess.pid
@@ -748,6 +821,7 @@ GUILD_ID=your_guild_id_here
             console.log(chalk.blue('Use "Stop bot" to stop the bot'));
             
         } catch (error) {
+            this.logger.error('Failed to start bot', error);
             console.log(chalk.red(this.locale.formatString(
                 this.locale.get('errors.failed_to_start'),
                 error.message
@@ -756,15 +830,18 @@ GUILD_ID=your_guild_id_here
     }
 
     async stopBot() {
+        this.logger.info(this.locale.get('menu.stop_bot') + '...');
         console.log(chalk.cyan('\n' + this.locale.get('menu.stop_bot') + '...'));
 
         if (!await this.checkBotProcess()) {
+            this.logger.warn('Bot is not running');
             console.log(chalk.yellow(this.locale.get('messages.bot_not_running')));
             return;
         }
 
         try {
             const pid = parseInt(fs.readFileSync(this.pidFile, 'utf8'));
+            this.logger.info(`Stopping bot with PID: ${pid}`);
             
             if (process.platform === 'win32') {
                 execSync(`taskkill /pid ${pid} /f /t`);
@@ -777,9 +854,11 @@ GUILD_ID=your_guild_id_here
             }
             
             this.isBotRunning = false;
+            this.logger.info('Bot stopped successfully');
             console.log(chalk.green(this.locale.get('messages.bot_stopped')));
             
         } catch (error) {
+            this.logger.error('Failed to stop bot', error);
             console.log(chalk.red(this.locale.formatString(
                 this.locale.get('errors.failed_to_stop'),
                 error.message
@@ -792,9 +871,11 @@ GUILD_ID=your_guild_id_here
     }
 
     async deployCommands(type) {
+        this.logger.info(this.locale.get(type === 'guild' ? 'menu.deploy_guild' : 'menu.deploy_global') + '...');
         console.log(chalk.cyan('\n' + this.locale.get(type === 'guild' ? 'menu.deploy_guild' : 'menu.deploy_global') + '...'));
 
         if (!await this.validateConfig()) {
+            this.logger.error('Configuration not filled');
             console.log(chalk.red('Configuration not filled!'));
             console.log(chalk.yellow('First configure the bot by editing .env file.'));
             return;
@@ -805,12 +886,15 @@ GUILD_ID=your_guild_id_here
             'Commands appear instantly!' : 
             'Commands appear within 24 hours';
 
+        this.logger.info(`Deploying ${type} commands with script: ${scriptName}`);
         console.log(chalk.yellow(`${message}`));
 
         try {
             await this.runCommand(`node ${scriptName}`, 'Sending commands to Discord...');
+            this.logger.info('Commands deployed successfully');
             console.log(chalk.green(this.locale.get('messages.commands_deployed')));
         } catch (error) {
+            this.logger.error('Failed to deploy commands', error);
             console.log(chalk.red(this.locale.formatString(
                 this.locale.get('errors.failed_to_deploy'),
                 error.message
@@ -819,12 +903,15 @@ GUILD_ID=your_guild_id_here
     }
 
     async updateDependencies() {
+        this.logger.info(this.locale.get('menu.update_deps') + '...');
         console.log(chalk.cyan('\n' + this.locale.get('menu.update_deps') + '...'));
         
         try {
             await this.runCommand('npm update --no-fund --no-audit', 'Updating packages...');
+            this.logger.info('Dependencies updated successfully');
             console.log(chalk.green(this.locale.get('messages.deps_installed')));
         } catch (error) {
+            this.logger.error('Failed to update dependencies', error);
             console.log(chalk.red(this.locale.get('errors.failed_to_update')));
         }
     }
@@ -832,6 +919,8 @@ GUILD_ID=your_guild_id_here
     async showDetailedStatus() {
         console.clear();
         console.log(chalk.cyan.bold('\n' + this.locale.get('menu.system_status') + '\n'));
+
+        this.logger.info('Displaying detailed system status');
 
         const status = await this.getSystemStatus();
         
@@ -889,9 +978,11 @@ GUILD_ID=your_guild_id_here
                     }
                 });
             } catch (e) {
+                this.logger.error('Failed to read .env file', e);
                 console.log(chalk.red('Failed to read .env file'));
             }
         } else {
+            this.logger.warn('Configuration not filled');
             console.log(chalk.red('Configuration not filled'));
             console.log(chalk.cyan('\nTo configure the bot:'));
             console.log(chalk.yellow('  1. Edit the .env file with your credentials'));
@@ -918,7 +1009,9 @@ GUILD_ID=your_guild_id_here
             });
             
             console.log(chalk.green(`Total commands: ${totalCommands}`));
+            this.logger.debug(`Found ${totalCommands} commands in ${commandFolders.length} categories`);
         } else {
+            this.logger.warn('Commands folder not found');
             console.log(chalk.red('Commands folder not found'));
         }
 
@@ -928,6 +1021,12 @@ GUILD_ID=your_guild_id_here
             console.log(chalk.blue(`PID: ${pid}`));
             console.log(chalk.blue(`Platform: ${process.platform}`));
         }
+
+        const logStats = this.logger.getLogStats();
+        console.log(chalk.cyan('\nLog statistics:'));
+        console.log(chalk.blue(`Log file: ${logStats.path}`));
+        console.log(chalk.blue(`Log size: ${(logStats.size / 1024).toFixed(2)} KB`));
+        console.log(chalk.blue(`Log entries: ${logStats.lines}`));
     }
 
     async waitForEnter() {
@@ -941,18 +1040,23 @@ GUILD_ID=your_guild_id_here
             }
         ]);
         
+        this.logger.info('User pressed Enter to continue');
         await this.showMainMenu();
     }
 
     exit() {
+        this.logger.info(this.locale.get('bot_manager.shutting_down'));
         console.log(chalk.cyan('\n' + this.locale.get('bot_manager.shutting_down')));
         
         if (this.isBotRunning) {
+            this.logger.warn('Stopping bot before exit...');
             console.log(chalk.yellow('Stopping bot before exit...'));
             this.stopBot().then(() => {
+                this.logger.system('BotManager shutdown complete');
                 process.exit(0);
             });
         } else {
+            this.logger.system('BotManager shutdown complete');
             process.exit(0);
         }
     }

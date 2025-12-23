@@ -18,6 +18,7 @@ main
 vendor/
 /profiles
 /node_modules
+/logs
 
 # IDEs directories
 .idea

@@ -1,28 +1,31 @@
 {
 
-  "engines": {
+    "engines": {
     "node": ">=16.0.0",
     "npm": ">=7.0.0"
   },
+
   "dependencies": {
     "chalk": "^4.1.2",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.3",
     "inquirer": "^8.2.6"
   },
+
   "scripts": {
     "start": "node bot-manager.js",
     "menu": "node bot-manager.js --menu",
     "install-deps": "node bot-manager.js --install",
-    "setup": "node bot-manager.js --setup",
+    "create-env": "node bot-manager.js --create-env",
     "bot": "node index.js",
     "deploy-guild": "node bot-manager.js --deploy-guild",
     "deploy-global": "node bot-manager.js --deploy-global",
     "update": "node bot-manager.js --update",
-    "reset": "node bot-manager.js --reset",
     "status": "node bot-manager.js --status",
     "help": "node bot-manager.js --help",
-    "change-language": "node bot-manager.js --change-language"
+    "change-language": "node bot-manager.js --change-language",
+    "view-logs": "node bot-manager.js --view-logs",
+    "clear-logs": "node bot-manager.js --clear-logs"
   }
-  
+
 }
