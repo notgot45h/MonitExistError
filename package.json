@@ -1,6 +1,5 @@
 {
-  "_comment": "короче, потом напишу",
-  
+
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=7.0.0"
@@ -22,7 +21,8 @@
     "update": "node bot-manager.js --update",
     "reset": "node bot-manager.js --reset",
     "status": "node bot-manager.js --status",
-    "help": "node bot-manager.js --help"
-  },
-"__comment": "Ну и дичь)"
+    "help": "node bot-manager.js --help",
+    "change-language": "node bot-manager.js --change-language"
+  }
+  
 }
