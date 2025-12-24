@@ -16,11 +16,21 @@
     "missing": "Отсутствуют",
     "configured": "Настроено",
     "not_configured": "Не настроено",
+    "not_installed": "Не установлен",
+    "enabled": "Включен",
+    "disabled": "Отключен",
     "found_version": "Найден версии: {0}",
     "current_status": "Текущий статус системы:",
     "select_action": "Выберите действие:",
     "press_enter": "Нажмите Enter для продолжения...",
-    "shutting_down": "Завершение работы..."
+    "shutting_down": "Завершение работы...",
+    "plugins_directory": "Директория плагинов",
+    "log_statistics": "Статистика логов",
+    "log_file": "Файл логов",
+    "log_size": "Размер логов",
+    "log_entries": "Записей в логах",
+    "version": "Версия",
+    "author": "Автор"
   },
   "menu": {
     "start_bot": "Запустить бота",
@@ -29,11 +39,11 @@
     "install_deps": "Установить зависимости",
     "update_deps": "Обновить зависимости",
     "reset_config": "Сброс настроек",
-    "deploy_guild": "Деплой команд (гильдия)",
-    "deploy_global": "Деплой команд (глобально)",
     "system_status": "Статус системы",
     "change_language": "Сменить язык",
-    "exit": "Выход"
+    "exit": "Выход",
+    "manage_plugins": "Управление плагинами",
+    "plugins": "Плагины"
   },
   "messages": {
     "bot_started": "Бот успешно запущен! (PID: {0})",
@@ -41,18 +51,23 @@
     "bot_already_running": "Бот уже запущен!",
     "bot_not_running": "Бот не запущен!",
     "deps_installed": "Зависимости успешно установлены!",
+    "deps_not_installed": "Зависимости не установлены. Устанавливаем...",
     "config_saved": "Настройки сохранены!",
     "config_reset": "Конфигурация сброшена!",
-    "commands_deployed": "Команды успешно отправлены!",
     "env_template_created": "Создан шаблон .env. Настройте его вручную!",
-    "env_not_configured": "Бот не настроен! Отредактируйте файл .env вручную."
+    "env_not_configured": "Бот не настроен! Отредактируйте файл .env вручную.",
+    "env_not_found": "Файл .env не найден. Создаем шаблон...",
+    "use_stop_bot": "Используйте 'Остановить бота' для остановки бота",
+    "stopping_bot_before_exit": "Останавливаем бота перед выходом...",
+    "no_plugins": "Плагины не найдены"
   },
   "errors": {
     "failed_to_start": "Ошибка запуска бота: {0}",
     "failed_to_stop": "Ошибка остановки бота: {0}",
     "failed_to_install": "Ошибка установки зависимостей!",
     "failed_to_update": "Ошибка обновления зависимостей!",
-    "failed_to_deploy": "Ошибка деплоя команд: {0}"
+    "nodejs_not_installed": "Node.js не установлен!",
+    "npm_not_found": "npm не найден!"
   },
   "prompts": {
     "enter_token": "Введите Discord Token бота:",
@@ -63,7 +78,9 @@
     "guild_id_invalid": "Server ID должен содержать цифры!",
     "create_new_config": "Создать новую конфигурацию?",
     "continue": "Нажмите Enter...",
-    "select_language": "Выберите язык:"
+    "select_language": "Выберите язык:",
+    "create_env_template": "Создаем шаблон .env файла...",
+    "edit_env_instructions": "Пожалуйста, отредактируйте файл .env с вашими данными."
   },
   "help": {
     "title": "Discord Bot Manager - Справка по командам:",

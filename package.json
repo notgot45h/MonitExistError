@@ -24,6 +24,7 @@
     "status": "node bot-manager.js --status",
     "help": "node bot-manager.js --help",
     "change-language": "node bot-manager.js --change-language",
+    "plugins": "node bot-manager.js --plugins",
     "view-logs": "node bot-manager.js --view-logs",
     "clear-logs": "node bot-manager.js --clear-logs"
   }

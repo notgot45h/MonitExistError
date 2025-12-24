@@ -16,11 +16,21 @@
     "missing": "Missing",
     "configured": "Configured",
     "not_configured": "Not Configured",
+    "not_installed": "Not Installed",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
     "found_version": "Found version: {0}",
     "current_status": "Current system status:",
     "select_action": "Select action:",
     "press_enter": "Press Enter to continue...",
-    "shutting_down": "Shutting down..."
+    "shutting_down": "Shutting down...",
+    "plugins_directory": "Plugins directory",
+    "log_statistics": "Log statistics",
+    "log_file": "Log file",
+    "log_size": "Log size",
+    "log_entries": "Log entries",
+    "version": "Version",
+    "author": "Author"
   },
   "menu": {
     "start_bot": "Start bot",
@@ -29,11 +39,11 @@
     "install_deps": "Install dependencies",
     "update_deps": "Update dependencies",
     "reset_config": "Reset configuration",
-    "deploy_guild": "Deploy commands (guild)",
-    "deploy_global": "Deploy commands (global)",
     "system_status": "System status",
     "change_language": "Change language",
-    "exit": "Exit"
+    "exit": "Exit",
+    "manage_plugins": "Manage plugins",
+    "plugins": "Plugins"
   },
   "messages": {
     "bot_started": "Bot started successfully! (PID: {0})",
@@ -41,18 +51,23 @@
     "bot_already_running": "Bot is already running!",
     "bot_not_running": "Bot is not running!",
     "deps_installed": "Dependencies installed successfully!",
+    "deps_not_installed": "Dependencies not installed. Installing...",
     "config_saved": "Configuration saved!",
     "config_reset": "Configuration reset!",
-    "commands_deployed": "Commands deployed successfully!",
     "env_template_created": ".env template created. Please configure it manually!",
-    "env_not_configured": "Bot is not configured! Please edit .env file manually."
+    "env_not_configured": "Bot is not configured! Please edit .env file manually.",
+    "env_not_found": ".env file not found. Creating template...",
+    "use_stop_bot": "Use 'Stop bot' to stop the bot",
+    "stopping_bot_before_exit": "Stopping bot before exit...",
+    "no_plugins": "No plugins found"
   },
   "errors": {
     "failed_to_start": "Failed to start bot: {0}",
     "failed_to_stop": "Failed to stop bot: {0}",
     "failed_to_install": "Failed to install dependencies!",
     "failed_to_update": "Failed to update dependencies!",
-    "failed_to_deploy": "Failed to deploy commands: {0}"
+    "nodejs_not_installed": "Node.js is not installed!",
+    "npm_not_found": "npm not found!"
   },
   "prompts": {
     "enter_token": "Enter Discord Bot Token:",
@@ -63,7 +78,9 @@
     "guild_id_invalid": "Server ID must contain numbers!",
     "create_new_config": "Create new configuration?",
     "continue": "Press Enter...",
-    "select_language": "Select language:"
+    "select_language": "Select language:",
+    "create_env_template": "Creating .env template file...",
+    "edit_env_instructions": "Please edit .env file with your credentials."
   },
   "help": {
     "title": "Discord Bot Manager - Command Help:",

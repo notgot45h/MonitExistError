@@ -53,6 +53,20 @@ class LocaleManager {
                 .filter(file => file.endsWith('.json') && file !== 'language-config.json')
                 .map(file => file.replace('.json', ''))
                 .sort();
+            
+            for (const langCode of this.availableLanguages) {
+                try {
+                    const localeFile = path.join(this.localesDir, `${langCode}.json`);
+                    if (fs.existsSync(localeFile)) {
+                        const data = JSON.parse(fs.readFileSync(localeFile, 'utf8'));
+                        if (data.language_info) {
+                            this.languageDisplayNames[langCode] = data.language_info;
+                        }
+                    }
+                } catch (error) {
+                    this.logger.warn(`Error reading language info for ${langCode}: ${error.message}`);
+                }
+            }
         } catch (error) {
             this.logger.error('Error loading available languages', error);
             this.availableLanguages = [this.defaultLanguage];
@@ -227,7 +241,6 @@ class LocaleManager {
 
     refreshAvailableLanguages() {
         this.loadAvailableLanguages();
-        this.languageDisplayNames = {};
         return this.availableLanguages;
     }
 
@@ -238,7 +251,7 @@ class LocaleManager {
             let displayName = null;
             
             if (this.languageDisplayNames[langCode]) {
-                displayName = `${this.languageDisplayNames[langCode].native_name} (${this.languageDisplayNames[langCode].display_name})`;
+                displayName = `${this.languageDisplayNames[langCode].display_name} (${this.languageDisplayNames[langCode].native_name})`;
             } else {
                 try {
                     const localeFile = path.join(this.localesDir, `${langCode}.json`);
@@ -246,7 +259,7 @@ class LocaleManager {
                         const data = JSON.parse(fs.readFileSync(localeFile, 'utf8'));
                         if (data.language_info) {
                             this.languageDisplayNames[langCode] = data.language_info;
-                            displayName = `${data.language_info.native_name} (${data.language_info.display_name})`;
+                            displayName = `${data.language_info.display_name} (${data.language_info.native_name})`;
                         }
                     }
                 } catch (error) {
@@ -274,10 +287,270 @@ class LocaleManager {
     }
 }
 
+class PluginManagerMenu {
+    constructor(botManager, locale) {
+        this.botManager = botManager;
+        this.locale = locale;
+        this.pluginsDir = path.join(__dirname, 'plugins');
+        this.configFile = path.join(this.pluginsDir, 'plugins-config.json');
+        
+        this.initializePluginsDirectory();
+    }
+
+    initializePluginsDirectory() {
+        try {
+            if (!fs.existsSync(this.pluginsDir)) {
+                fs.mkdirSync(this.pluginsDir, { recursive: true });
+                this.botManager.logger.system('Created plugins directory');
+            }
+        } catch (error) {
+            this.botManager.logger.error('Failed to initialize plugins directory', error);
+        }
+    }
+
+    scanPlugins() {
+        try {
+            if (!fs.existsSync(this.pluginsDir)) return [];
+            
+            const pluginFolders = fs.readdirSync(this.pluginsDir).filter(folder => {
+                const pluginPath = path.join(this.pluginsDir, folder);
+                return fs.statSync(pluginPath).isDirectory();
+            });
+            
+            return pluginFolders;
+        } catch (error) {
+            this.botManager.logger.error('Failed to scan plugins', error);
+            return [];
+        }
+    }
+
+    getPluginInfo(pluginName) {
+        const pluginPath = path.join(this.pluginsDir, pluginName);
+        const packageFile = path.join(pluginPath, 'package.json');
+        const pluginFile = path.join(pluginPath, 'index.js');
+        
+        if (!fs.existsSync(pluginFile)) return null;
+        
+        try {
+            let pluginInfo = {
+                name: pluginName,
+                path: pluginPath,
+                main: pluginFile,
+                enabled: false
+            };
+            
+            if (fs.existsSync(packageFile)) {
+                const packageData = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+                pluginInfo = { ...pluginInfo, ...packageData };
+            }
+            
+            if (fs.existsSync(this.configFile)) {
+                const configData = JSON.parse(fs.readFileSync(this.configFile, 'utf8'));
+                if (configData.plugins && configData.plugins[pluginName]) {
+                    pluginInfo.enabled = configData.plugins[pluginName].enabled || false;
+                }
+            }
+            
+            return pluginInfo;
+        } catch (error) {
+            this.botManager.logger.error(`Failed to get plugin info for ${pluginName}`, error);
+            return null;
+        }
+    }
+
+    getPluginList() {
+        const pluginFolders = this.scanPlugins();
+        const plugins = [];
+        
+        for (const pluginName of pluginFolders) {
+            const info = this.getPluginInfo(pluginName);
+            if (info) {
+                plugins.push({
+                    name: info.name,
+                    enabled: info.enabled,
+                    description: info.description || 'No description',
+                    version: info.version || '1.0.0',
+                    author: info.author || 'Unknown'
+                });
+            }
+        }
+        
+        return plugins;
+    }
+
+    togglePlugin(pluginName, enabled) {
+        try {
+            let configData = { plugins: {} };
+            
+            if (fs.existsSync(this.configFile)) {
+                configData = JSON.parse(fs.readFileSync(this.configFile, 'utf8'));
+            }
+            
+            if (!configData.plugins) configData.plugins = {};
+            
+            const pluginInfo = this.getPluginInfo(pluginName);
+            const currentConfig = configData.plugins[pluginName] || {};
+            
+            configData.plugins[pluginName] = {
+                ...currentConfig,
+                enabled: enabled,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            fs.writeFileSync(this.configFile, JSON.stringify(configData, null, 2));
+            
+            this.botManager.logger.info(`Plugin ${pluginName} ${enabled ? 'enabled' : 'disabled'}`);
+            return true;
+        } catch (error) {
+            this.botManager.logger.error(`Failed to toggle plugin ${pluginName}`, error);
+            return false;
+        }
+    }
+
+    async showPluginMenu() {
+        console.clear();
+        console.log(chalk.cyan.bold('\n=== Plugin Manager ===\n'));
+        
+        const plugins = this.getPluginList();
+        
+        if (plugins.length === 0) {
+            console.log(chalk.yellow('No plugins found in the plugins directory.'));
+            console.log(chalk.cyan('\nTo add a plugin:'));
+            console.log(chalk.blue('  1. Create a folder in the plugins directory'));
+            console.log(chalk.blue('  2. Add an index.js file with plugin code'));
+            console.log(chalk.blue('  3. (Optional) Add package.json with plugin info'));
+            console.log(chalk.blue(`\nPlugins directory: ${this.pluginsDir}`));
+            
+            await this.botManager.waitForEnter();
+            return;
+        }
+        
+        console.log(chalk.blue(`Found ${plugins.length} plugin(s):\n`));
+        
+        plugins.forEach((plugin, index) => {
+            const status = plugin.enabled ? 
+                chalk.green('[ENABLED]') : 
+                chalk.red('[DISABLED]');
+            
+            console.log(chalk.white(`${index + 1}. ${plugin.name} ${status}`));
+            console.log(chalk.gray(`   Version: ${plugin.version} | Author: ${plugin.author}`));
+            console.log(chalk.gray(`   ${plugin.description}`));
+            console.log('');
+        });
+        
+        const { action } = await inquirer.prompt({
+            type: 'list',
+            name: 'action',
+            message: 'Select action:',
+            choices: [
+                { name: 'Enable plugin', value: 'enable' },
+                { name: 'Disable plugin', value: 'disable' },
+                { name: 'Reload plugin list', value: 'reload' },
+                { name: 'Back to main menu', value: 'back' }
+            ]
+        });
+        
+        switch (action) {
+            case 'enable':
+                await this.enablePluginMenu();
+                break;
+            case 'disable':
+                await this.disablePluginMenu();
+                break;
+            case 'reload':
+                await this.showPluginMenu();
+                break;
+            case 'back':
+                break;
+        }
+    }
+
+    async enablePluginMenu() {
+        const plugins = this.getPluginList();
+        const disabledPlugins = plugins.filter(p => !p.enabled);
+        
+        if (disabledPlugins.length === 0) {
+            console.log(chalk.yellow('No disabled plugins available.'));
+            await this.botManager.waitForEnter();
+            await this.showPluginMenu();
+            return;
+        }
+        
+        const choices = disabledPlugins.map(plugin => ({
+            name: `${plugin.name} (${plugin.description})`,
+            value: plugin.name
+        }));
+        
+        choices.push({ name: 'Cancel', value: 'cancel' });
+        
+        const { pluginName } = await inquirer.prompt({
+            type: 'list',
+            name: 'pluginName',
+            message: 'Select plugin to enable:',
+            choices: choices
+        });
+        
+        if (pluginName === 'cancel') {
+            await this.showPluginMenu();
+            return;
+        }
+        
+        if (this.togglePlugin(pluginName, true)) {
+            console.log(chalk.green(`Plugin "${pluginName}" enabled successfully!`));
+            console.log(chalk.yellow('Note: Bot needs to be restarted for changes to take effect.'));
+        } else {
+            console.log(chalk.red(`Failed to enable plugin "${pluginName}"`));
+        }
+        
+        await this.botManager.waitForEnter();
+        await this.showPluginMenu();
+    }
+
+    async disablePluginMenu() {
+        const plugins = this.getPluginList();
+        const enabledPlugins = plugins.filter(p => p.enabled);
+        
+        if (enabledPlugins.length === 0) {
+            console.log(chalk.yellow('No enabled plugins available.'));
+            await this.botManager.waitForEnter();
+            await this.showPluginMenu();
+            return;
+        }
+        
+        const choices = enabledPlugins.map(plugin => ({
+            name: `${plugin.name} (${plugin.description})`,
+            value: plugin.name
+        }));
+        
+        choices.push({ name: 'Cancel', value: 'cancel' });
+        
+        const { pluginName } = await inquirer.prompt({
+            type: 'list',
+            name: 'pluginName',
+            message: 'Select plugin to disable:',
+            choices: choices
+        });
+        
+        if (pluginName === 'cancel') {
+            await this.showPluginMenu();
+            return;
+        }
+        
+        if (this.togglePlugin(pluginName, false)) {
+            console.log(chalk.green(`Plugin "${pluginName}" disabled successfully!`));
+            console.log(chalk.yellow('Note: Bot needs to be restarted for changes to take effect.'));
+        } else {
+            console.log(chalk.red(`Failed to disable plugin "${pluginName}"`));
+        }
+        
+        await this.botManager.waitForEnter();
+        await this.showPluginMenu();
+    }
+}
+
 class BotManager {
     constructor() {
         this.logger = new Logger();
-        // Выключаем вывод логов в консоль меню
         this.logger.setConsoleOutput(false);
         
         this.isBotRunning = false;
@@ -285,6 +558,7 @@ class BotManager {
         this.pidFile = path.join(__dirname, 'bot.pid');
         this.envFile = path.join(__dirname, '.env');
         this.locale = new LocaleManager(this.logger);
+        this.pluginManager = new PluginManagerMenu(this, this.locale);
         
         this.logger.system('BotManager initialized');
         this.handleCommandLineArgs();
@@ -302,7 +576,7 @@ class BotManager {
     }
 
     async executeCommandLineArgs(args) {
-        this.logger.info('Discord Bot Manager - Automatic Mode');
+        this.logger.info('Discord Bot Manager - Plugin System');
         
         for (const arg of args) {
             this.logger.info(`Processing argument: ${arg}`);
@@ -320,12 +594,6 @@ class BotManager {
                 case '--stop':
                     await this.stopBot();
                     break;
-                case '--deploy-guild':
-                    await this.deployCommands('guild');
-                    break;
-                case '--deploy-global':
-                    await this.deployCommands('global');
-                    break;
                 case '--update':
                     await this.updateDependencies();
                     break;
@@ -338,6 +606,9 @@ class BotManager {
                     break;
                 case '--menu':
                     await this.showMainMenu();
+                    break;
+                case '--plugins':
+                    await this.pluginManager.showPluginMenu();
                     break;
                 case '--help':
                 case '-h':
@@ -363,31 +634,32 @@ class BotManager {
     }
 
     showHelp() {
-        console.log(chalk.cyan(this.locale.get('help.title') + '\n'));
+        console.log(chalk.cyan('Discord Bot Manager - Plugin System\n'));
         
-        console.log(this.locale.get('help.main_commands') + ':');
-        console.log(chalk.green('  npm start') + '              - ' + 'Interactive menu');
-        console.log(chalk.green('  node bot-manager.js --menu') + '    - ' + 'Interactive menu\n');
+        console.log('Main commands:');
+        console.log(chalk.green('  npm start') + '              - Interactive menu');
+        console.log(chalk.green('  node bot-manager.js --menu') + '    - Interactive menu\n');
         
-        console.log(this.locale.get('help.auto_commands') + ':');
-        console.log(chalk.green('  --install, -i') + '          - ' + 'Install dependencies');
-        console.log(chalk.green('  --create-env') + '            - ' + 'Create .env template file');
-        console.log(chalk.green('  --start') + '                - ' + 'Start bot');
-        console.log(chalk.green('  --stop') + '                 - ' + 'Stop bot');
-        console.log(chalk.green('  --deploy-guild') + '         - ' + 'Deploy guild commands');
-        console.log(chalk.green('  --deploy-global') + '        - ' + 'Deploy global commands');
-        console.log(chalk.green('  --update') + '               - ' + 'Update dependencies');
-        console.log(chalk.green('  --status') + '               - ' + 'System status');
-        console.log(chalk.green('  --change-language, -l') + '   - ' + 'Change interface language');
-        console.log(chalk.green('  --refresh-locales') + '       - ' + 'Refresh available locales');
-        console.log(chalk.green('  --repair-locales') + '        - ' + 'Repair corrupted locale files');
-        console.log(chalk.green('  --view-logs') + '            - ' + 'View recent logs');
-        console.log(chalk.green('  --clear-logs') + '           - ' + 'Clear all logs');
-        console.log(chalk.green('  --help, -h') + '             - ' + 'This help\n');
+        console.log('Plugin System Commands:');
+        console.log(chalk.green('  --plugins') + '              - Manage plugins\n');
         
-        console.log(this.locale.get('help.examples') + ':');
+        console.log('System Commands:');
+        console.log(chalk.green('  --install, -i') + '          - Install dependencies');
+        console.log(chalk.green('  --create-env') + '            - Create .env template file');
+        console.log(chalk.green('  --start') + '                - Start bot');
+        console.log(chalk.green('  --stop') + '                 - Stop bot');
+        console.log(chalk.green('  --update') + '               - Update dependencies');
+        console.log(chalk.green('  --status') + '               - System status');
+        console.log(chalk.green('  --change-language, -l') + '   - Change interface language');
+        console.log(chalk.green('  --refresh-locales') + '       - Refresh available locales');
+        console.log(chalk.green('  --repair-locales') + '        - Repair corrupted locale files');
+        console.log(chalk.green('  --view-logs') + '            - View recent logs');
+        console.log(chalk.green('  --clear-logs') + '           - Clear all logs');
+        console.log(chalk.green('  --help, -h') + '             - This help\n');
+        
+        console.log('Examples:');
         console.log(chalk.cyan('  node bot-manager.js --install --create-env --start'));
-        console.log(chalk.cyan('  npm start'));
+        console.log(chalk.cyan('  node bot-manager.js --plugins'));
         
         this.logger.info('Help displayed');
         process.exit(0);
@@ -407,13 +679,11 @@ class BotManager {
                 { name: this.locale.get('menu.start_bot'), value: 'start' },
                 { name: this.locale.get('menu.stop_bot'), value: 'stop' },
                 new inquirer.Separator(),
+                { name: this.locale.get('menu.manage_plugins'), value: 'plugins' },
                 { name: this.locale.get('menu.change_language'), value: 'change-language' },
                 new inquirer.Separator(),
                 { name: this.locale.get('menu.install_deps'), value: 'install' },
                 { name: this.locale.get('menu.update_deps'), value: 'update' },
-                new inquirer.Separator(),
-                { name: this.locale.get('menu.deploy_guild'), value: 'deploy-guild' },
-                { name: this.locale.get('menu.deploy_global'), value: 'deploy-global' },
                 new inquirer.Separator(),
                 { name: this.locale.get('menu.system_status'), value: 'status' },
                 { name: this.locale.get('menu.exit'), value: 'exit' }
@@ -449,10 +719,6 @@ class BotManager {
     }
 
     viewLogs() {
-        // Включаем вывод логов только для этой команды
-        const tempLogger = new Logger();
-        tempLogger.setConsoleOutput(true);
-        
         const logs = this.logger.getRecentLogs(100);
         console.log(chalk.cyan('\nRecent logs (last 100 lines):\n'));
         logs.forEach(log => console.log(chalk.gray(log)));
@@ -476,7 +742,6 @@ class BotManager {
         
         this.logger.info('Checking system status');
         this.logger.debug(`Bot running: ${this.isBotRunning}`);
-        this.logger.debug(`System status: ${JSON.stringify(systemStatus)}`);
         
         console.log(chalk.blue(this.locale.get('bot_manager.current_status')));
         console.log(chalk.white('┌──────────────────'));
@@ -500,6 +765,16 @@ class BotManager {
             this.locale.get('bot_manager.nodejs'),
             systemStatus.node
         )));
+        
+        const plugins = this.pluginManager.getPluginList();
+        const enabledPlugins = plugins.filter(p => p.enabled).length;
+        console.log(chalk.white(this.locale.formatString(
+            '│ {0}            {1}/{2}',
+            this.locale.get('menu.plugins'),
+            enabledPlugins,
+            plugins.length
+        )));
+        
         console.log(chalk.white('└──────────────────\n'));
     }
 
@@ -541,20 +816,22 @@ class BotManager {
             case 'stop':
                 await this.stopBot();
                 break;
+            case 'plugins':
+                await this.pluginManager.showPluginMenu();
+                await this.waitForEnter();
+                break;
             case 'change-language':
-                await this.changeLanguage();
+                const changed = await this.changeLanguage();
+                if (changed) {
+                    console.log(chalk.green(`Language changed to ${this.locale.getCurrentLanguage().toUpperCase()}`));
+                }
+                await this.waitForEnter();
                 break;
             case 'install':
                 await this.installDependencies();
                 break;
             case 'update':
                 await this.updateDependencies();
-                break;
-            case 'deploy-guild':
-                await this.deployCommands('guild');
-                break;
-            case 'deploy-global':
-                await this.deployCommands('global');
                 break;
             case 'status':
                 await this.showDetailedStatus();
@@ -577,7 +854,7 @@ class BotManager {
         if (languageChoices.length === 0) {
             this.logger.error('No languages available!');
             console.log(chalk.red('No languages available!'));
-            return;
+            return false;
         }
         
         const { selectedLanguage } = await inquirer.prompt({
@@ -592,7 +869,16 @@ class BotManager {
             to: selectedLanguage 
         });
         
-        this.locale.setLanguage(selectedLanguage);
+        const success = this.locale.setLanguage(selectedLanguage);
+        
+        if (success) {
+            console.log(chalk.green(`Language changed to ${this.locale.getCurrentLanguage().toUpperCase()}`));
+            console.log(chalk.yellow('Restart the menu to see changes in the interface.'));
+        } else {
+            console.log(chalk.red('Failed to change language!'));
+        }
+        
+        return success;
     }
 
     async checkNodeJS() {
@@ -683,14 +969,14 @@ class BotManager {
         
         if (!await this.checkNodeJS()) {
             this.logger.error('Node.js is not installed!');
-            console.log(chalk.red('Node.js is not installed!'));
+            console.log(chalk.red(this.locale.get('errors.nodejs_not_installed')));
             console.log(chalk.yellow('Download from: https://nodejs.org/'));
             return false;
         }
 
         if (!await this.checkNPM()) {
             this.logger.error('npm not found!');
-            console.log(chalk.red('npm not found!'));
+            console.log(chalk.red(this.locale.get('errors.npm_not_found')));
             console.log(chalk.yellow('Reinstall Node.js'));
             return false;
         }
@@ -717,7 +1003,7 @@ class BotManager {
 
     async createEnvTemplate() {
         this.logger.info('Creating .env template file...');
-        console.log(chalk.cyan('\nCreating .env template file...'));
+        console.log(chalk.cyan('\n' + this.locale.get('prompts.create_env_template')));
         
         const template = `# Discord Bot Configuration
 # ============================================
@@ -776,7 +1062,7 @@ GUILD_ID=your_guild_id_here
 
         if (!fs.existsSync('node_modules')) {
             this.logger.warn('Dependencies not installed. Installing...');
-            console.log(chalk.yellow('Dependencies not installed. Installing...'));
+            console.log(chalk.yellow(this.locale.get('messages.deps_not_installed')));
             const installed = await this.installDependencies();
             if (!installed) {
                 this.logger.error('Failed to install dependencies');
@@ -787,19 +1073,17 @@ GUILD_ID=your_guild_id_here
 
         if (!fs.existsSync(this.envFile)) {
             this.logger.warn('.env file not found. Creating template...');
-            console.log(chalk.yellow('.env file not found. Creating template...'));
+            console.log(chalk.yellow(this.locale.get('messages.env_not_found')));
             await this.createEnvTemplate();
             console.log(chalk.red(this.locale.get('messages.env_not_configured')));
-            console.log(chalk.cyan(this.locale.get('messages.env_instructions')));
             return;
         }
 
         if (!await this.validateConfig()) {
             this.logger.error('Bot configuration is not valid');
             console.log(chalk.red(this.locale.get('messages.env_not_configured')));
-            console.log(chalk.yellow('\nPlease edit .env file with your credentials.'));
+            console.log(chalk.yellow('\n' + this.locale.get('prompts.edit_env_instructions')));
             console.log(chalk.blue(`Location: ${path.resolve(this.envFile)}`));
-            console.log(chalk.cyan(this.locale.get('messages.env_instructions')));
             return;
         }
 
@@ -825,7 +1109,7 @@ GUILD_ID=your_guild_id_here
                 this.locale.get('messages.bot_started'),
                 this.botProcess.pid
             )));
-            console.log(chalk.blue('Use "Stop bot" to stop the bot'));
+            console.log(chalk.blue(this.locale.get('messages.use_stop_bot')));
             
         } catch (error) {
             this.logger.error('Failed to start bot', error);
@@ -877,38 +1161,6 @@ GUILD_ID=your_guild_id_here
         }
     }
 
-    async deployCommands(type) {
-        this.logger.info(this.locale.get(type === 'guild' ? 'menu.deploy_guild' : 'menu.deploy_global') + '...');
-        console.log(chalk.cyan('\n' + this.locale.get(type === 'guild' ? 'menu.deploy_guild' : 'menu.deploy_global') + '...'));
-
-        if (!await this.validateConfig()) {
-            this.logger.error('Configuration not filled');
-            console.log(chalk.red('Configuration not filled!'));
-            console.log(chalk.yellow('First configure the bot by editing .env file.'));
-            return;
-        }
-
-        const scriptName = type === 'guild' ? 'deploy-commands-guild.js' : 'deploy-commands-global.js';
-        const message = type === 'guild' ? 
-            'Commands appear instantly!' : 
-            'Commands appear within 24 hours';
-
-        this.logger.info(`Deploying ${type} commands with script: ${scriptName}`);
-        console.log(chalk.yellow(`${message}`));
-
-        try {
-            await this.runCommand(`node ${scriptName}`, 'Sending commands to Discord...');
-            this.logger.info('Commands deployed successfully');
-            console.log(chalk.green(this.locale.get('messages.commands_deployed')));
-        } catch (error) {
-            this.logger.error('Failed to deploy commands', error);
-            console.log(chalk.red(this.locale.formatString(
-                this.locale.get('errors.failed_to_deploy'),
-                error.message
-            )));
-        }
-    }
-
     async updateDependencies() {
         this.logger.info(this.locale.get('menu.update_deps') + '...');
         console.log(chalk.cyan('\n' + this.locale.get('menu.update_deps') + '...'));
@@ -954,86 +1206,32 @@ GUILD_ID=your_guild_id_here
         )));
         console.log(chalk.white('└──────────────────'));
 
-        console.log(chalk.cyan('\nConfiguration details:'));
-        if (await this.validateConfig()) {
-            try {
-                const envContent = fs.readFileSync(this.envFile, 'utf8');
-                const lines = envContent.split('\n');
+        const plugins = this.pluginManager.getPluginList();
+        console.log(chalk.cyan('\n' + this.locale.get('menu.plugins') + ':'));
+        
+        if (plugins.length === 0) {
+            console.log(chalk.yellow(this.locale.get('messages.no_plugins')));
+        } else {
+            plugins.forEach((plugin, index) => {
+                const status = plugin.enabled ? 
+                    chalk.green(this.locale.get('bot_manager.enabled')) : 
+                    chalk.red(this.locale.get('bot_manager.disabled'));
                 
-                lines.forEach(line => {
-                    if (line.startsWith('DISCORD_TOKEN=')) {
-                        const token = line.replace('DISCORD_TOKEN=', '').trim();
-                        if (token !== 'your_bot_token_here' && token.length > 10) {
-                            console.log(chalk.green(`DISCORD_TOKEN: ${token.substring(0, 10)}...`));
-                        } else {
-                            console.log(chalk.red('DISCORD_TOKEN: Not configured'));
-                        }
-                    } else if (line.startsWith('CLIENT_ID=')) {
-                        const clientId = line.replace('CLIENT_ID=', '').trim();
-                        if (clientId !== 'your_client_id_here' && clientId.length > 0) {
-                            console.log(chalk.blue(`Client ID: ${clientId}`));
-                        } else {
-                            console.log(chalk.red('Client ID: Not configured'));
-                        }
-                    } else if (line.startsWith('GUILD_ID=')) {
-                        const guildId = line.replace('GUILD_ID=', '').trim();
-                        if (guildId !== 'your_guild_id_here' && guildId.length > 0) {
-                            console.log(chalk.blue(`Guild ID: ${guildId}`));
-                        } else {
-                            console.log(chalk.red('Guild ID: Not configured'));
-                        }
-                    }
-                });
-            } catch (e) {
-                this.logger.error('Failed to read .env file', e);
-                console.log(chalk.red('Failed to read .env file'));
-            }
-        } else {
-            this.logger.warn('Configuration not filled');
-            console.log(chalk.red('Configuration not filled'));
-            console.log(chalk.cyan('\nTo configure the bot:'));
-            console.log(chalk.yellow('  1. Edit the .env file with your credentials'));
-            console.log(chalk.blue(`     Location: ${path.resolve(this.envFile)}`));
-            console.log(chalk.yellow('  2. Restart the bot'));
-        }
-
-        console.log(chalk.cyan('\nLanguage settings:'));
-        console.log(chalk.blue(`Current language: ${this.locale.getCurrentLanguage().toUpperCase()}`));
-        console.log(chalk.blue(`Available languages: ${this.locale.availableLanguages.join(', ')}`));
-
-        console.log(chalk.cyan('\nAvailable commands:'));
-        if (fs.existsSync('commands')) {
-            let totalCommands = 0;
-            const commandFolders = fs.readdirSync('commands');
-            
-            commandFolders.forEach(folder => {
-                const folderPath = path.join('commands', folder);
-                if (fs.statSync(folderPath).isDirectory()) {
-                    const commands = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
-                    totalCommands += commands.length;
-                    console.log(chalk.blue(`${folder}: ${commands.length} commands`));
-                }
+                console.log(chalk.white(`${index + 1}. ${plugin.name} [${status}]`));
+                console.log(chalk.gray(`   ${plugin.description}`));
+                console.log(chalk.gray(`   ${this.locale.get('bot_manager.version')}: ${plugin.version} | ${this.locale.get('bot_manager.author')}: ${plugin.author}`));
+                console.log('');
             });
-            
-            console.log(chalk.green(`Total commands: ${totalCommands}`));
-            this.logger.debug(`Found ${totalCommands} commands in ${commandFolders.length} categories`);
-        } else {
-            this.logger.warn('Commands folder not found');
-            console.log(chalk.red('Commands folder not found'));
         }
 
-        if (this.isBotRunning && fs.existsSync(this.pidFile)) {
-            const pid = fs.readFileSync(this.pidFile, 'utf8');
-            console.log(chalk.cyan('\nProcess information:'));
-            console.log(chalk.blue(`PID: ${pid}`));
-            console.log(chalk.blue(`Platform: ${process.platform}`));
-        }
+        console.log(chalk.cyan(this.locale.get('bot_manager.plugins_directory') + ':'));
+        console.log(chalk.blue(`  ${this.pluginManager.pluginsDir}`));
 
         const logStats = this.logger.getLogStats();
-        console.log(chalk.cyan('\nLog statistics:'));
-        console.log(chalk.blue(`Log file: ${logStats.path}`));
-        console.log(chalk.blue(`Log size: ${(logStats.size / 1024).toFixed(2)} KB`));
-        console.log(chalk.blue(`Log entries: ${logStats.lines}`));
+        console.log(chalk.cyan('\n' + this.locale.get('bot_manager.log_statistics') + ':'));
+        console.log(chalk.blue(`${this.locale.get('bot_manager.log_file')}: ${logStats.path}`));
+        console.log(chalk.blue(`${this.locale.get('bot_manager.log_size')}: ${(logStats.size / 1024).toFixed(2)} KB`));
+        console.log(chalk.blue(`${this.locale.get('bot_manager.log_entries')}: ${logStats.lines}`));
     }
 
     async waitForEnter() {
@@ -1057,7 +1255,7 @@ GUILD_ID=your_guild_id_here
         
         if (this.isBotRunning) {
             this.logger.warn('Stopping bot before exit...');
-            console.log(chalk.yellow('Stopping bot before exit...'));
+            console.log(chalk.yellow(this.locale.get('messages.stopping_bot_before_exit')));
             this.stopBot().then(() => {
                 this.logger.system('BotManager shutdown complete');
                 process.exit(0);
