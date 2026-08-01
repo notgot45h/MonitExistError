@@ -13,7 +13,7 @@ const {
   loadSingleCommand,
   unloadCommand
 } = require('./utils/commandHandler');
-const { addAllowedUser, removeAllowedUser } = require('./utils/configManager');
+const { addAllowedUser, removeAllowedUser, getAllowedUsers } = require('./utils/configManager');
 const config = require('./config.json');
 const logger = require('./utils/logger');
 
@@ -336,13 +336,14 @@ app.post('/api/roles/remove', async (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
-  res.json({ allowedUsers: config.allowedUsers, superAdmins: config.superAdmins });
+  const users = getAllowedUsers();
+  res.json({ allowedUsers: users, superAdmins: config.superAdmins });
 });
 
 app.post('/api/users/add', async (req, res) => {
-  const { userId } = req.body;
+  const { userId, name } = req.body;
   if (!userId) return res.status(400).json({ error: 'Не указан ID' });
-  const added = addAllowedUser(userId);
+  const added = addAllowedUser(userId, name || '');
   res.json({ success: added });
 });
 

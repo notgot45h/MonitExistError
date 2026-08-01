@@ -1,5 +1,5 @@
 const API_BASE = '/api';
-let currentPage = 'dashboard';
+let currentPage = 'servers';
 let logInterval = null;
 let autoScroll = true;
 let chartInstance = null;
@@ -26,15 +26,15 @@ function updateFileList(containerId, fileList, inputId) {
   const container = $(containerId);
   container.innerHTML = '';
   if (fileList.length === 0) {
-    container.innerHTML = '<span style="color:#b5bac1;font-size:0.9rem;">Файлы не выбраны</span>';
+    container.innerHTML = '<span style="color:#404040;font-size:0.9rem;">Файлы не выбраны</span>';
     return;
   }
   const ul = document.createElement('ul');
-  ul.style.cssText = 'list-style:none;padding:0;margin:8px 0;';
+  ul.style.cssText = 'list-style:none;padding:0;margin:4px 0;';
   fileList.forEach((f, i) => {
     const li = document.createElement('li');
-    li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#2b2d31;border-radius:4px;margin-bottom:4px;';
-    li.innerHTML = `<span>${f.name} (${(f.size/1024).toFixed(1)} KB)</span><button data-idx="${i}" class="file-remove" style="background:#ED4245;border:none;color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer;">×</button>`;
+    li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:2px 6px;background:#e0e0e0;border:1px solid #808080;margin-bottom:2px;';
+    li.innerHTML = `<span>${f.name} (${(f.size/1024).toFixed(1)} KB)</span><button data-idx="${i}" class="button file-remove" style="background:none;border:2px solid #808080;border-top-color:#fff;border-left-color:#fff;padding:0 6px;cursor:pointer;font-weight:bold;">×</button>`;
     container.appendChild(li);
   });
   container.querySelectorAll('.file-remove').forEach(btn => {
@@ -50,39 +50,6 @@ function updateFileList(containerId, fileList, inputId) {
         $(inputId).value = '';
       }
     });
-  });
-}
-
-async function loadStats() {
-  const data = await fetchJSON('/api/stats');
-  const grid = $('stats-grid');
-  grid.innerHTML = `
-    <div class="stat-card"><div class="label">Серверов</div><div class="value">${data.guilds}</div></div>
-    <div class="stat-card"><div class="label">Пинг</div><div class="value">${data.ping}ms</div></div>
-    <div class="stat-card"><div class="label">Пользователей</div><div class="value">${data.users}</div></div>
-    <div class="stat-card"><div class="label">Онлайн</div><div class="value">${data.online}</div></div>
-    <div class="stat-card"><div class="label">Uptime</div><div class="value">${formatUptime(data.uptime)}</div></div>
-    <div class="stat-card"><div class="label">Команд сегодня</div><div class="value">${data.commandsToday}</div></div>
-  `;
-  return data;
-}
-
-async function loadActivity() {
-  const data = await fetchJSON('/api/activity');
-  const ctx = document.getElementById('activityChart').getContext('2d');
-  if (chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: data.map(d => d.date),
-      datasets: [{
-        label: 'Команды',
-        data: data.map(d => d.count),
-        backgroundColor: '#5865F2',
-        borderRadius: 4
-      }]
-    },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
   });
 }
 
@@ -116,7 +83,7 @@ async function showServerDetail(guildId) {
   const content = $('server-detail-content');
   content.innerHTML = `
     <h3>${data.name}</h3>
-    <img src="${data.icon || 'https://cdn.discordapp.com/embed/avatars/0.png'}" style="width:80px;border-radius:50%;">
+    <img src="${data.icon || 'https://cdn.discordapp.com/embed/avatars/0.png'}" style="width:80px;border:1px solid #808080;">
     <p><strong>ID:</strong> ${data.id} <span onclick="copyId('${data.id}')" style="cursor:pointer;">📋</span></p>
     <p><strong>Владелец:</strong> ${data.owner}</p>
     <p><strong>Участников:</strong> ${data.memberCount}</p>
@@ -143,7 +110,7 @@ async function showServerDetail(guildId) {
   updateFileList('modal-file-list', modalFiles, 'modal-file-input');
   $('modal-message-text').value = '';
   $('modal-send-result').textContent = '';
-  modal.style.display = 'flex';
+  modal.style.display = 'block';
 }
 
 document.querySelector('.modal-close').addEventListener('click', () => {
@@ -199,7 +166,7 @@ async function loadCommands() {
     tr.innerHTML = `
       <td>${item.file}</td>
       <td><button class="cmd-toggle ${loaded?'enabled':'disabled'}" data-name="${item.file}" data-state="${loaded}">${loaded?'Вкл':'Выкл'}</button></td>
-      <td><button class="cmd-reload" data-name="${item.file}">Перезагрузить</button></td>
+      <td><button class="cmd-reload button" data-name="${item.file}">Перезагрузить</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -250,16 +217,22 @@ async function loadUsers() {
   const data = await fetchJSON('/api/users');
   const list = $('users-list');
   list.innerHTML = '';
-  data.allowedUsers.forEach(id => {
+  data.allowedUsers.forEach(user => {
     const div = document.createElement('div');
     div.className = 'user-item';
-    div.innerHTML = `<span>${id}</span><button data-id="${id}">Удалить</button>`;
+    div.innerHTML = `
+      <span>
+        <span class="user-name">${user.name || 'Без имени'}</span>
+        <span class="user-id">(${user.id})</span>
+      </span>
+      <button class="button" data-id="${user.id}" style="background:none;border:2px solid #808080;border-top-color:#fff;border-left-color:#fff;padding:2px 12px;cursor:pointer;">Удалить</button>
+    `;
     list.appendChild(div);
   });
   document.querySelectorAll('.user-item button').forEach(btn => {
     btn.addEventListener('click', async function() {
       const id = this.dataset.id;
-      if (!confirm(`Удалить ${id}?`)) return;
+      if (!confirm(`Удалить пользователя ${id}?`)) return;
       const res = await fetchJSON('/api/users/remove', {
         method: 'DELETE',
         headers: {'Content-Type':'application/json'},
@@ -340,7 +313,6 @@ function showPage(page) {
   document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
   document.querySelector(`#sidebar nav a[data-page="${page}"]`)?.classList.add('active');
   $('page-title').textContent = page.charAt(0).toUpperCase() + page.slice(1);
-  if (page === 'dashboard') { loadStats(); loadActivity(); }
   if (page === 'servers') loadGuilds();
   if (page === 'commands') loadCommands();
   if (page === 'logs') loadLogs();
@@ -555,14 +527,20 @@ document.getElementById('act-update-all-guilds').addEventListener('click', async
 
 document.getElementById('add-user-btn').addEventListener('click', async function() {
   const id = document.getElementById('add-user-id').value.trim();
-  if (!id) return alert('Введите ID');
+  const name = document.getElementById('add-user-name').value.trim();
+  if (!id) return alert('Введите ID пользователя');
   const res = await fetchJSON('/api/users/add', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ userId: id })
+    body: JSON.stringify({ userId: id, name: name || '' })
   });
-  if (res.success) { loadUsers(); document.getElementById('add-user-id').value = ''; }
-  else alert('Ошибка');
+  if (res.success) {
+    loadUsers();
+    document.getElementById('add-user-id').value = '';
+    document.getElementById('add-user-name').value = '';
+  } else {
+    alert('Ошибка при добавлении');
+  }
 });
 
 async function updateStatus() {
@@ -577,6 +555,6 @@ async function updateStatus() {
   }
 }
 
-showPage('dashboard');
+showPage('servers');
 updateStatus();
 setInterval(updateStatus, 5000);
