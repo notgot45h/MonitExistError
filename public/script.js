@@ -365,10 +365,6 @@ document.getElementById('log-clear').addEventListener('click', async function() 
 
 setInterval(loadLogs, 3000);
 
-document.getElementById('quick-start').addEventListener('click', () => { document.getElementById('act-start').click(); });
-document.getElementById('quick-stop').addEventListener('click', () => { document.getElementById('act-stop').click(); });
-document.getElementById('quick-restart').addEventListener('click', () => { document.getElementById('act-restart').click(); });
-
 document.getElementById('act-start').addEventListener('click', async function() {
   const res = await fetchJSON('/api/bot/start', { method: 'POST' });
   if (res.success) { alert('Бот запущен'); updateStatus(); } else alert('Ошибка: '+res.error);
