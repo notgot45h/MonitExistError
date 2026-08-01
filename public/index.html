@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>Панель управления ботом</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-brand">🤖 BotPanel</div>
+      <button id="sidebar-close" class="mobile-only"><i class="fas fa-times"></i></button>
+      <nav>
+        <a href="#" data-page="dashboard" class="active"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="#" data-page="servers"><i class="fas fa-server"></i> Servers</a>
+        <a href="#" data-page="commands"><i class="fas fa-terminal"></i> Commands</a>
+        <a href="#" data-page="logs"><i class="fas fa-history"></i> Logs</a>
+        <a href="#" data-page="actions"><i class="fas fa-tools"></i> Actions</a>
+        <a href="#" data-page="settings"><i class="fas fa-cog"></i> Settings</a>
+      </nav>
+    </aside>
+    <main id="main">
+      <header id="topbar">
+        <button id="sidebar-toggle" class="mobile-only"><i class="fas fa-bars"></i></button>
+        <h2 id="page-title">Dashboard</h2>
+        <div id="bot-status">Статус: <span id="status-badge">Загрузка...</span></div>
+      </header>
+      <section id="page-content">
+        <div id="page-dashboard" class="page active">
+          <div id="stats-grid"></div>
+          <div id="activity-chart-container">
+            <canvas id="activityChart"></canvas>
+          </div>
+          <div id="quick-actions">
+            <button id="quick-start" class="quick-btn"><i class="fas fa-play"></i> Start</button>
+            <button id="quick-stop" class="quick-btn"><i class="fas fa-stop"></i> Stop</button>
+            <button id="quick-restart" class="quick-btn"><i class="fas fa-sync"></i> Restart</button>
+          </div>
+        </div>
+        <div id="page-servers" class="page">
+          <div id="server-filters">
+            <input type="text" id="server-search" placeholder="Поиск по названию...">
+            <select id="server-sort"><option value="name">По имени</option><option value="members">По участникам</option></select>
+          </div>
+          <div id="servers-grid"></div>
+          <div id="server-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+              <span class="modal-close">&times;</span>
+              <div id="server-detail-content"></div>
+              <hr>
+              <h4>Отправить сообщение</h4>
+              <select id="modal-channel-select"></select>
+              <textarea id="modal-message-text" placeholder="Текст сообщения..."></textarea>
+              <input type="file" id="modal-file-input" multiple accept="*/*">
+              <div id="modal-file-list"></div>
+              <button id="modal-send-message">Отправить</button>
+              <div id="modal-send-result"></div>
+            </div>
+          </div>
+        </div>
+        <div id="page-commands" class="page">
+          <div id="commands-toolbar">
+            <input type="text" id="cmd-search" placeholder="Поиск команды...">
+            <button id="cmd-refresh"><i class="fas fa-sync"></i> Обновить</button>
+          </div>
+          <div class="table-wrapper">
+            <table id="commands-table">
+              <thead><tr><th>Имя</th><th>Состояние</th><th>Действия</th></tr></thead>
+              <tbody id="commands-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="page-logs" class="page">
+          <div id="logs-toolbar">
+            <select id="log-level"><option value="">Все</option><option value="INFO">INFO</option><option value="WARN">WARN</option><option value="ERROR">ERROR</option><option value="COMMAND">COMMAND</option></select>
+            <input type="text" id="log-search" placeholder="Поиск...">
+            <button id="log-auto-scroll" class="active"><i class="fas fa-arrow-down"></i> Авто</button>
+            <button id="log-clear"><i class="fas fa-trash"></i> Очистить</button>
+          </div>
+          <div id="log-container"><pre id="log-output"></pre></div>
+        </div>
+        <div id="page-actions" class="page">
+          <div class="action-group"><h3>Управление ботом</h3><button id="act-start">Запустить</button><button id="act-stop">Остановить</button><button id="act-restart">Перезагрузить</button><button id="act-shutdown">Завершить процесс</button></div>
+          <div class="action-group"><h3>Сообщения</h3>
+            <div><select id="act-guild-select"><option value="">Выберите сервер</option></select></div>
+            <div><select id="act-channel-select"><option value="">Выберите канал</option></select></div>
+            <div><input type="text" id="act-send-text" placeholder="Текст сообщения"></div>
+            <div><input type="file" id="act-file-input" multiple accept="*/*"></div>
+            <div id="act-file-list"></div>
+            <button id="act-send-guild">Отправить</button>
+            <button id="act-sendall">Отправить всем (только текст)</button>
+            <div id="send-result"></div>
+          </div>
+          <div class="action-group"><h3>Управление ролями</h3>
+            <div><select id="role-guild-select"><option value="">Выберите сервер</option></select></div>
+            <div><select id="role-select"><option value="">Выберите роль</option></select></div>
+            <div><input type="text" id="role-user-id" placeholder="ID пользователя"></div>
+            <button id="role-give">Выдать роль</button>
+            <button id="role-remove">Снять роль</button>
+            <div id="role-result"></div>
+          </div>
+          <div class="action-group"><h3>Обновление команд</h3>
+            <button id="act-update-global">Обновить глобальные</button>
+            <div><select id="act-update-guild-select"><option value="">Выберите сервер</option></select></div>
+            <button id="act-update-guild">Обновить на выбранном сервере</button>
+            <button id="act-update-all-guilds">Обновить на всех</button>
+          </div>
+        </div>
+        <div id="page-settings" class="page">
+          <h3>Разрешенные пользователи</h3>
+          <div id="users-list"></div>
+          <div><input type="text" id="add-user-id" placeholder="ID пользователя"><button id="add-user-btn">Добавить</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

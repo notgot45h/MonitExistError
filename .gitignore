@@ -1,38 +1,7 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary, built with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# Binaries
-main
-
-# Dependency directories
-vendor/
-/profiles
-/node_modules
-/logs
-
-# IDEs directories
-.idea
-.vscode
-
-coverage.html
-.env
+node_modules
 package-lock.json
-
-# Configs
-/config.json
-/update-config.json
-/language-config.json
-
-# Storage files
-
-bot.pid
+bot.log
+12.0.0
+config.json
+guilds.json
+package-lock.json
