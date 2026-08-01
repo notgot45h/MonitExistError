@@ -359,9 +359,12 @@ app.post('/api/restart', (req, res) => {
   setTimeout(() => core.restartBot(), 100);
 });
 
-app.post('/api/shutdown', (req, res) => {
+app.post('/api/shutdown', async (req, res) => {
   res.json({ success: true });
-  setTimeout(() => process.exit(0), 100);
+  if (core.isBotRunning()) {
+    await core.stopBot();
+  }
+  setTimeout(() => process.exit(0), 500);
 });
 
 app.post('/api/bot/start', async (req, res) => {

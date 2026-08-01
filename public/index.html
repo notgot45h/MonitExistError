@@ -20,6 +20,7 @@
       </div>
       <nav>
         <a href="#" data-page="servers"><i class="fas fa-server"></i> Servers</a>
+        <a href="#" data-page="botcontrol"><i class="fas fa-robot"></i> Bot Control</a>
         <a href="#" data-page="commands"><i class="fas fa-terminal"></i> Commands</a>
         <a href="#" data-page="logs"><i class="fas fa-history"></i> Logs</a>
         <a href="#" data-page="actions"><i class="fas fa-tools"></i> Actions</a>
@@ -59,6 +60,17 @@
             </div>
           </div>
         </div>
+        <div id="page-botcontrol" class="page">
+          <div class="window" style="padding:8px;margin-bottom:12px;">
+            <div class="title-bar"><div class="title-bar-text">Управление ботом</div></div>
+            <div style="padding:8px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="act-start" class="button">Запустить</button>
+              <button id="act-stop" class="button">Остановить</button>
+              <button id="act-restart" class="button">Перезагрузить</button>
+              <button id="act-shutdown" class="button">Завершить процесс</button>
+            </div>
+          </div>
+        </div>
         <div id="page-commands" class="page">
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <input type="text" id="cmd-search" class="input" placeholder="Поиск команды..." style="flex:1;min-width:120px;">
@@ -83,15 +95,6 @@
           </div>
         </div>
         <div id="page-actions" class="page">
-          <div class="window" style="padding:8px;margin-bottom:12px;">
-            <div class="title-bar"><div class="title-bar-text">Управление ботом</div></div>
-            <div style="padding:8px;display:flex;gap:8px;flex-wrap:wrap;">
-              <button id="act-start" class="button">Запустить</button>
-              <button id="act-stop" class="button">Остановить</button>
-              <button id="act-restart" class="button">Перезагрузить</button>
-              <button id="act-shutdown" class="button">Завершить процесс</button>
-            </div>
-          </div>
           <div class="window" style="padding:8px;margin-bottom:12px;">
             <div class="title-bar"><div class="title-bar-text">Сообщения</div></div>
             <div style="padding:8px;display:flex;flex-direction:column;gap:6px;">
